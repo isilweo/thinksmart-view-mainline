@@ -127,8 +127,15 @@ which enables touch; the stock pmOS lk2nd image did not for us.
     ! 'video/x-h264,level=(string)4,profile=(string)baseline' ! h264parse config-interval=-1
     ! rtph264pay pt=96 mtu=1200 ! udpsink host=... port=5000
   ```
-  The NV12 conversion runs on the CPU; that is what limits us to 640x480.
-- Decoder: `rtph264depay ! h264parse ! v4l2h264dec ! glimagesink`
+  The soft ISP outputs RGBA and `videoconvert` turns it into NV12 on the CPU.
+  With libcamera 0.7.1 that limited us to 640x480; with 0.8.0, 1280x960 runs at
+  30 fps into Venus using about one of the eight cores. Converting on the GPU
+  instead (`glupload ! glcolorconvert ! gldownload`) only reached 15 fps,
+  because of the download from GPU memory.
+- Decoder: `rtph264depay ! h264parse ! v4l2h264dec ! glimagesink`. Its own
+  latency is about 4 ms for streams without B-frames; enabling
+  `display_delay_enable` (decode-order output) changes that by well under a
+  millisecond, so it is not worth setting
   (`waylandsink` gave a black screen in cage for us). We only tested streams
   encoded without B-frames.
 - `pipewiresrc` together with the camera in one pipeline lost its clock for us;
@@ -177,7 +184,11 @@ rtspsrc location=rtsps://... protocols=tcp
   and does a SysRq sync + reboot after 60 s of lockup, at most 3 times per
   hour. A proper watchdog in the DT would be better.
 - After long audio sessions the ADSP sometimes stops (`q6asm` error 9, no
-  sound); a reboot fixes it.
+  sound); a reboot fixes it. Full-duplex use makes it much more likely: with
+  PipeWire's WebRTC echo canceller (which removes about 40 dB of speaker echo)
+  the capture stream fails when playback starts, or `q6asm_open_write` returns
+  error 9 after a few open/close cycles. This looks like a bug in the qdsp6
+  path for MSM8953 and is not solved yet.
 
 ## Where the values come from
 
