@@ -1,7 +1,7 @@
-From 02a5b577fe33226fa1bd25eb0d404458dd4df713 Mon Sep 17 00:00:00 2001
+From 3f89e2c7739eb32790f144378dc48e2ab9e4dbfe Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 08/22] media: venus: vdec: complete the drain when EOS lands
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 08/28] media: venus: vdec: complete the drain when EOS lands
  in a held buffer
 
 When userspace is slow to return capture buffers (READONLY frames, slow

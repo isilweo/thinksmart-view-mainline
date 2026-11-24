@@ -27,7 +27,7 @@ those files.
 
 | Part | Status |
 |---|---|
-| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953, libcamera SoftISP (GPU debayer): 1304x980 preview at 27-30 fps using about one CPU core. AWB is grey world and there is no colour matrix yet. |
+| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. AWB is grey world and there is no colour matrix yet. |
 | Venus H.264 encoder | `v4l2h264enc`: bitrate control works (1 Mb/s target gives 931-959 kb/s), 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
 | Venus H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC (that fix is so far tested on one unit; the others still run the version before it). |
 | Venus H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core, see below. |
@@ -46,7 +46,7 @@ before encoding.
 ## Layout
 
 ```
-kernel/series/       22 patches, one change each (git format-patch)
+kernel/series/       28 patches, one change each (git format-patch)
 kernel/debug/        ramoops + Venus fw_debug parameter, not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
 kernel/config.fragment
@@ -169,11 +169,16 @@ units are identified separately.
 
 ## License
 
-- Kernel driver and Kconfig changes (`kernel/series/0001`-`0017`, the C part
-  of `kernel/debug/`, `kernel/third-party/`): GPL-2.0-only, see
+- Kernel driver changes (`kernel/series/0001`-`0013`, `0016`-`0023`, the C
+  part of `kernel/debug/`, `kernel/third-party/`): GPL-2.0-only, see
   `LICENSES/GPL-2.0-only.txt`.
-- Changes to `apq8053-lenovo-cd-18781y.dts` (`kernel/series/0018`-`0022`, the
-  DTS part of `kernel/debug/`): BSD-3-Clause, like the original device tree,
-  which is copyright (c) 2024 Felix Kaechele. See `LICENSES/BSD-3-Clause.txt`.
+- The device tree binding change (`kernel/series/0014`):
+  GPL-2.0-only OR BSD-2-Clause, like the binding it changes. See
+  `LICENSES/GPL-2.0-only.txt` and `LICENSES/BSD-2-Clause.txt`.
+- Device tree changes: `msm8953.dtsi` (`kernel/series/0015`, original
+  copyright (c) 2022 The Linux Foundation) and `apq8053-lenovo-cd-18781y.dts`
+  (`kernel/series/0024`-`0028` and the DTS part of `kernel/debug/`, original
+  copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
+  change. See `LICENSES/BSD-3-Clause.txt`.
 - `README.md`, `INSTALL.md`, `kernel/config.fragment` and
   `libcamera/s5kc505a.yaml`: CC0-1.0, see `LICENSES/CC0-1.0.txt`.

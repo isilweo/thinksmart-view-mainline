@@ -1,5 +1,6 @@
 Copyright (c) 2024, Felix Kaechele (original device tree)
-Copyright (c) 2026, Lech Piekarski (changes in kernel/series/0018-0022 and kernel/debug) 
+Copyright (c) 2022, The Linux Foundation (original msm8953.dtsi)
+Copyright (c) 2026, Lech Piekarski (changes in kernel/series/0015, 0024-0028 and kernel/debug) 
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 

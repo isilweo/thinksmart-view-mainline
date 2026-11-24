@@ -1,7 +1,7 @@
-From e21546c3bcbfb270d026f596d1b88bc3ead718de Mon Sep 17 00:00:00 2001
+From 31974390111f5cf328e2dd3c52be8ad7b8dcfaf5 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 10/22] media: ccs: implement enum_frame_size for the pixel
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 10/28] media: ccs: implement enum_frame_size for the pixel
  array
 
 libcamera takes the sensor resolutions from VIDIOC_SUBDEV_ENUM_FRAME_SIZE

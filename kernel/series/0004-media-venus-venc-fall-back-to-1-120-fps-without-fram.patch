@@ -1,7 +1,7 @@
-From 2b9cc4f605e722a9ab54d626cb62537c6745a38e Mon Sep 17 00:00:00 2001
+From 42ec63bbda1ed2fa5d514c8af42523dff357900c Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 04/22] media: venus: venc: fall back to 1-120 fps without
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 04/28] media: venus: venc: fall back to 1-120 fps without
  frame rate caps
 
 The MSM8953 firmware VIDEO.VE.4.2 reports no HFI_CAPABILITY_FRAMERATE for

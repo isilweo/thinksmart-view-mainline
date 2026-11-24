@@ -1,7 +1,7 @@
-From 37316eabc1a64d27977bbeda94bcb7569ed1d729 Mon Sep 17 00:00:00 2001
+From 9fd7bed3b6e8fcdb80406a2f2bb01c177b369a35 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 11/22] media: ccs: add a quirk for the Samsung S5KC505A
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 11/28] media: ccs: add a quirk for the Samsung S5KC505A
 
 The S5KC505A (front camera of the Lenovo ThinkSmart View) identifies as
 CCS 0.8 with module ident 0x00/0x5034. Its clock limit registers are
@@ -17,9 +17,12 @@ Add a quirk that:
 
 The register tables were extracted from the stock Lenovo
 libmmcamera_s5kc505a.so. The same tables are already published under
-GPL-2.0 in rebrch/tsv-nura (commit 32e84a9f4bf5, camera/driver/
-s5kc505a_regs.h): the init table is identical to s5kc505a_global and the
-mode table is a subset of s5kc505a_2608x1960. Their meaning is not
+GPL-2.0 in rebrch/tsv-nura:
+
+https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/driver/s5kc505a_regs.h
+
+The init table is identical to s5kc505a_global and the mode table is a
+subset of s5kc505a_2608x1960. Their meaning is not
 documented; they are the vendor's power-on and mode sequence.
 
 Tested with libcamera SoftISP: 1304x980 (binned in the sensor) preview

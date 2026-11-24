@@ -1,7 +1,7 @@
-From 116086a8d8a9312530bbcd9a6f0f7c3c2e9b68ee Mon Sep 17 00:00:00 2001
+From ea9642ed23cef0db3baeb29d46075d1f4bcc11b4 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 12/22] media: qcom: camss: do not walk into multi-subdev
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 12/28] media: qcom: camss: do not walk into multi-subdev
  sensors
 
 video_start_streaming() calls s_stream on every subdev up the pipeline.

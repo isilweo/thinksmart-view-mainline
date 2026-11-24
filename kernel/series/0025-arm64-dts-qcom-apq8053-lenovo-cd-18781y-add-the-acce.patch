@@ -1,7 +1,7 @@
-From 37a9960fc5685ec235373cda221c00790c4f0b8d Mon Sep 17 00:00:00 2001
+From fdaeacaed0ffd593b8b633903f6c10970de6f60f Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 19/22] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 25/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
  accelerometer mount matrix
 
 Map the bma253 axes to the panel (native portrait). Verified with

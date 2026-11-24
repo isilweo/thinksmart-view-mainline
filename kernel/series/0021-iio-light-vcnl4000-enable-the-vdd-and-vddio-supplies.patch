@@ -1,7 +1,7 @@
-From 5ededb69825593cb3d03734f0423627b7a9c73ac Mon Sep 17 00:00:00 2001
+From 929ac6db1dba5590d6f75f12d4cb5f1fa6aa609c Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 15/22] iio: light: vcnl4000: enable the vdd and vddio supplies
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 21/28] iio: light: vcnl4000: enable the vdd and vddio supplies
 
 On the Lenovo ThinkSmart View the VCNL4200 shares its LDOs with the
 bma253 accelerometer. When vcnl4000 probes first the sensor is still

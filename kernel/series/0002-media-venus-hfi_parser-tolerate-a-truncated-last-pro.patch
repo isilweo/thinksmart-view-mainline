@@ -1,7 +1,7 @@
-From 0450cdf773730433395dec67c50409fd86113a7a Mon Sep 17 00:00:00 2001
+From 44feebad5cc47eb0a13f1e7b48c4eb415afd4fad Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:14 +0100
-Subject: [PATCH 02/22] media: venus: hfi_parser: tolerate a truncated last
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 02/28] media: venus: hfi_parser: tolerate a truncated last
  property
 
 The MSM8953 firmware VIDEO.VE.4.2 sends a SYS_INIT_DONE packet whose last

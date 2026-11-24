@@ -1,7 +1,7 @@
-From 24096449bf704158477810d900a784205b2cfcdd Mon Sep 17 00:00:00 2001
+From abac7e2f64f75405be8c57792808ff21a24afe47 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 17/22] iio: light: vcnl4000: autosuspend right after probe
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 23/28] iio: light: vcnl4000: autosuspend right after probe
 
 The sensor stays powered after probe until the first read. Mark the
 device busy and request autosuspend at the end of probe so it powers

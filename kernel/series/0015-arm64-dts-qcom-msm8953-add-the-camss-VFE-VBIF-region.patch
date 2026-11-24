@@ -1,0 +1,43 @@
+From 255f5313521e2185947ef4eba8c1825a8b9df6c4 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 15/28] arm64: dts: qcom: msm8953: add the camss VFE VBIF
+ regions
+
+Add the VFE0 and VFE1 VBIF register regions to the camss node so the
+driver can apply the VBIF QoS setting.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/qcom/msm8953.dtsi | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8953.dtsi b/arch/arm64/boot/dts/qcom/msm8953.dtsi
+index 79838fc..c51b3da 100644
+--- a/arch/arm64/boot/dts/qcom/msm8953.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8953.dtsi
+@@ -1761,7 +1761,9 @@
+ 			      <0x1b00040 0x4>,
+ 			      <0x1b31000 0x500>,
+ 			      <0x1b10000 0x1000>,
+-			      <0x1b14000 0x1000>;
++			      <0x1b14000 0x1000>,
++			      <0x1b40000 0x200>,
++			      <0x1ba0000 0x200>;
+ 			reg-names = "csi_clk_mux",
+ 				    "csid0",
+ 				    "csid1",
+@@ -1774,7 +1776,9 @@
+ 				    "csiphy2_clk_mux",
+ 				    "ispif",
+ 				    "vfe0",
+-				    "vfe1";
++				    "vfe1",
++				    "vfe0_vbif",
++				    "vfe1_vbif";
+ 
+ 			clocks = <&gcc GCC_CAMSS_AHB_CLK>,
+ 				 <&gcc GCC_CAMSS_CSI0_CLK>,
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,7 +1,7 @@
-From c2c80fc63ce9d81249ee77faed5c7de77a56068d Mon Sep 17 00:00:00 2001
+From 6edf92a9872ac2e167c57d5ecf213f02b56a374b Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 18/22] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable both
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 24/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable both
  touchscreens
 
 The ThinkSmart View ships with either a FocalTech FT8201 or a Himax

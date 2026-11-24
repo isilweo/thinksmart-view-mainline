@@ -1,7 +1,7 @@
-From 3c31729c56a795e93b526d11ab687d812a47fd96 Mon Sep 17 00:00:00 2001
+From 07940541a87630414d567ee0541c526fe9e610b3 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:14 +0100
-Subject: [PATCH 01/22] clk: qcom: gcc-msm8953: drop HW_CTRL from
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 01/28] clk: qcom: gcc-msm8953: drop HW_CTRL from
  venus_core0_gdsc
 
 The vendor kernel runs Venus on MSM8953 with software power collapse only

@@ -1,7 +1,7 @@
-From afdcb77833c950c2035571f8ef3deeadad4aec15 Mon Sep 17 00:00:00 2001
+From 2c93c87044673540a691ec1856935d21c263db4d Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 20/22] arm64: dts: qcom: apq8053-lenovo-cd-18781y: fix the
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 26/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: fix the
  sensor I2C pins
 
 The sensor I2C bus is on GPIO6/GPIO7, not GPIO14/GPIO15.

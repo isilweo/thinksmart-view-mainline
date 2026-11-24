@@ -1,7 +1,7 @@
-From fda11cd3aedc8b6cec26475c621027b479491976 Mon Sep 17 00:00:00 2001
+From 750a05fd4f871c56d6f7cf6faf0495a2537f3d53 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 07/22] media: venus: venc: allocate twice the minimum capture
+Date: Tue, 24 Nov 2026 14:54:25 +0100
+Subject: [PATCH 07/28] media: venus: venc: allocate twice the minimum capture
  buffers
 
 Capture buffers added after streaming started (VIDIOC_CREATE_BUFS) are

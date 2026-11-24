@@ -1,0 +1,101 @@
+From 5cd8ee19f29c41151f675f6eed65383fef26285d Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 19/28] media: qcom: camss: vfe-4-1: program the buffer size in
+ frame based mode
+
+In frame based mode (RDI) the write master buffer configuration
+(WR_BUFFER_CFG: words per line, height, burst length) was never written.
+The vendor msm_vfe40_axi_cfg_wm_reg() programs it for frame based write
+masters too. On MSM8953 RDI frames tear or get cut without it.
+
+Add an optional wm_frame_size operation and implement it for VFE 4.1,
+limited to MSM8953 (and SDM450): the vendor uses a different burst length
+on MSM8916 and MSM8939, which are left unchanged. The height field is
+12 bits wide, so heights above 4096 are refused with a warning.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../media/platform/qcom/camss/camss-vfe-4-1.c | 30 +++++++++++++++++++
+ .../platform/qcom/camss/camss-vfe-gen1.c      |  3 ++
+ .../platform/qcom/camss/camss-vfe-gen1.h      |  2 ++
+ 3 files changed, 35 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
+index 87767a0..2a9948a 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
+@@ -297,6 +297,35 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
+ 			1 << VFE_0_BUS_IMAGE_MASTER_n_WR_CFG_FRM_BASED_SHIFT);
+ }
+ 
++/*
++ * MSM8953: frame based mode still needs the buffer geometry, as the vendor
++ * msm_vfe40_axi_cfg_wm_reg() programs it: 64-bit words per line, height - 1
++ * and burst length 3 (the vendor uses 2 on MSM8916/MSM8939, which are left
++ * unchanged here). Without it MSM8953 tears or cuts RDI frames. The height
++ * field is 12 bits wide.
++ */
++#define VFE_0_WR_BUFFER_CFG_MAX_HEIGHT	4096
++
++static void vfe_wm_frame_size(struct vfe_device *vfe, u8 wm,
++			      struct v4l2_pix_format_mplane *pix)
++{
++	u32 wpl = DIV_ROUND_UP(pix->plane_fmt[0].bytesperline, 8);
++	u32 reg;
++
++	if (vfe->camss->res->version != CAMSS_8x53)
++		return;
++
++	if (WARN_ON_ONCE(pix->height > VFE_0_WR_BUFFER_CFG_MAX_HEIGHT))
++		return;
++
++	reg = 0x3;
++	reg |= (pix->height - 1) << 4;
++	reg |= wpl << 16;
++
++	writel_relaxed(reg, vfe->base +
++		       VFE_0_BUS_IMAGE_MASTER_n_WR_BUFFER_CFG(wm));
++}
++
+ static void vfe_get_wm_sizes(struct v4l2_pix_format_mplane *pix, u8 plane,
+ 			     u16 *width, u16 *height, u16 *bytesperline)
+ {
+@@ -1016,6 +1045,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
+ 	.set_xbar_cfg = vfe_set_xbar_cfg,
+ 	.wm_enable = vfe_wm_enable,
+ 	.wm_frame_based = vfe_wm_frame_based,
++	.wm_frame_size = vfe_wm_frame_size,
+ 	.wm_get_ping_pong_status = vfe_wm_get_ping_pong_status,
+ 	.wm_line_based = vfe_wm_line_based,
+ 	.wm_set_framedrop_pattern = vfe_wm_set_framedrop_pattern,
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
+index fe71056..aba79cf 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
+@@ -245,6 +245,9 @@ static int vfe_enable_output(struct vfe_line *line)
+ 		vfe->ops_gen1->wm_set_ub_cfg(vfe, output->wm_idx[0],
+ 					    (ub_size + 1) * output->wm_idx[0], ub_size);
+ 		vfe->ops_gen1->wm_frame_based(vfe, output->wm_idx[0], 1);
++		if (vfe->ops_gen1->wm_frame_size)
++			vfe->ops_gen1->wm_frame_size(vfe, output->wm_idx[0],
++						     &line->video_out.active_fmt.fmt.pix_mp);
+ 		vfe->ops_gen1->wm_enable(vfe, output->wm_idx[0], 1);
+ 		vfe->ops_gen1->bus_reload_wm(vfe, output->wm_idx[0]);
+ 	} else {
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
+index 5b9a635..f6db0fc 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
++++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
+@@ -45,6 +45,8 @@ struct vfe_hw_ops_gen1 {
+ 	void (*set_qos)(struct vfe_device *vfe);
+ 	void (*set_xbar_cfg)(struct vfe_device *vfe, struct vfe_output *output, u8 enable);
+ 	void (*wm_frame_based)(struct vfe_device *vfe, u8 wm, u8 enable);
++	void (*wm_frame_size)(struct vfe_device *vfe, u8 wm,
++			      struct v4l2_pix_format_mplane *pix);
+ 	void (*wm_line_based)(struct vfe_device *vfe, u32 wm, struct v4l2_pix_format_mplane *pix,
+ 			      u8 plane, u32 enable);
+ 	void (*wm_set_ub_cfg)(struct vfe_device *vfe, u8 wm, u16 offset, u16 depth);
+-- 
+2.54.0 (Apple Git-157)
+

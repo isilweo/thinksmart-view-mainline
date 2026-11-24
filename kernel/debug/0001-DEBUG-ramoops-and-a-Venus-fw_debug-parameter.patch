@@ -1,6 +1,6 @@
-From fcf903ef286bd26c80977e4ccceb954bcdad540d Mon Sep 17 00:00:00 2001
+From 4cf4a33cedd4da9b5ace4bc3b3a7da49ccc69635 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
+Date: Tue, 24 Nov 2026 14:54:26 +0100
 Subject: [PATCH] DEBUG: ramoops and a Venus fw_debug parameter
 
 Not for upstream. ramoops keeps the kernel log of a crash in

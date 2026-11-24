@@ -1,7 +1,7 @@
-From 310d4c65937a370c4e6b65f37ff906af3d8287eb Mon Sep 17 00:00:00 2001
+From 05613beb60b1832546c13173f5e0277ee77efcbf Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:16:15 +0100
-Subject: [PATCH 16/22] iio: light: vcnl4000: use low-power IR LED settings on
+Date: Tue, 24 Nov 2026 14:54:26 +0100
+Subject: [PATCH 22/28] iio: light: vcnl4000: use low-power IR LED settings on
  the VCNL4200
 
 The driver programs the VCNL4200 with 8 pulses of 120 mA at duty 1/160.
