@@ -1,5 +1,13 @@
 # SPDX-License-Identifier: CC0-1.0
-# Samsung S5KC505A (Lenovo ThinkSmart View): black level 64 at 10 bits = 4096 at 16 bits
+# Samsung S5KC505A (Lenovo ThinkSmart View)
+#
+# Black level 64 at 10 bits. Colour matrices fitted on a Datacolor
+# SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and 6500 K
+# (flat-fielded with the grey back of the chart); ct keys are the values the
+# soft ISP's estimateCCT() reports for those lights on this sensor.
+# The matrices are blended 50/50 with the identity: at full strength the
+# soft ISP turns clipped highlights pink and amplifies grey-world AWB errors.
+# Full-strength matrices: s5kc505a-full-ccm.yaml.
 %YAML 1.1
 ---
 version: 1
@@ -7,6 +15,16 @@ algorithms:
   - BlackLevel:
       blackLevel: 4096
   - Awb:
+  - Ccm:
+      ccms:
+        - ct: 3473
+          ccm: [ 1.612, -0.430, -0.181, -0.265, 1.387, -0.122, -0.030, -0.437, 1.467 ]
+        - ct: 4406
+          ccm: [ 1.641, -0.535, -0.107, -0.229, 1.393, -0.163, -0.029, -0.292, 1.321 ]
+        - ct: 4763
+          ccm: [ 1.658, -0.563, -0.095, -0.220, 1.394, -0.175, -0.029, -0.271, 1.300 ]
+        - ct: 5368
+          ccm: [ 1.679, -0.602, -0.076, -0.206, 1.398, -0.192, -0.032, -0.245, 1.277 ]
   - Adjust:
   - Agc:
 ...

@@ -40,7 +40,7 @@ those files.
 
 | Part | Status |
 |---|---|
-| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. AWB is grey world and there is no colour matrix yet. |
+| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. Colour matrices calibrated on a SpyderCheckr 24, used at half strength (see below). |
 | Venus H.264 encoder | `v4l2h264enc`: bitrate control works (1 Mb/s target gives 931-959 kb/s), 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
 | Venus H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC (that fix is so far tested on one unit; the others still run the version before it). |
 | Venus H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core, see below. |
@@ -50,8 +50,17 @@ those files.
 | Touch | Both FT8201 and HX83100A nodes enabled; the fitted one probes. |
 | Speaker TAS5782M | Uses Felix Kaechele's TAS5782M support (see `kernel/third-party/`). |
 
-Not done: echo cancellation, beamforming with the two DMICs, a proper camera
-colour calibration (a ColorChecker calibration is planned).
+Not done: echo cancellation, beamforming with the two DMICs.
+
+**Camera colour.** `libcamera/s5kc505a.yaml` has colour matrices fitted on a
+Datacolor SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and
+6500 K, flat-fielded with the grey back of the chart. Median CIE76 error after
+correction is 3.9-5.8 (`libcamera/s5kc505a-full-ccm.yaml`). In live use the
+soft ISP of libcamera 0.7.1 turns clipped highlights pink with the full
+matrices and amplifies grey-world AWB errors, so the default file blends them
+50/50 with the identity. The soft ISP AGC has no manual exposure, exposure
+compensation or highlight protection, so bright objects on a dark background
+clip.
 
 The two DMICs are quiet: we apply a software gain of 4 (`volume volume=4.0`)
 before encoding.
@@ -63,7 +72,7 @@ kernel/series/       28 patches, one change each (git format-patch)
 kernel/debug/        ramoops + Venus fw_debug parameter, not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
 kernel/config.fragment
-libcamera/           S5KC505A tuning file
+libcamera/           S5KC505A tuning files (half-strength and full colour matrices)
 LICENSES/            full license texts
 ```
 
@@ -87,7 +96,7 @@ In pmaports (v26.06):
    rebrch/tsv-nura,
    [`camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch`](https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch)
    (we use it unchanged apart from a comment), and `libcamera/s5kc505a.yaml`
-   to the tuning files;
+   to the tuning files (installed as `/usr/share/libcamera/ipa/simple/s5kc505a.yaml`);
 3. `soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10), otherwise
    apk may pick `alsa-ucm-conf-unisoc-ums9230`;
 4. `pmbootstrap checksum`, `pmbootstrap build`.
@@ -193,5 +202,5 @@ units are identified separately.
   (`kernel/series/0024`-`0028` and the DTS part of `kernel/debug/`, original
   copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
   change. See `LICENSES/BSD-3-Clause.txt`.
-- `README.md`, `INSTALL.md`, `kernel/config.fragment` and
-  `libcamera/s5kc505a.yaml`: CC0-1.0, see `LICENSES/CC0-1.0.txt`.
+- `README.md`, `INSTALL.md`, `kernel/config.fragment` and the
+  `libcamera/*.yaml` tuning files: CC0-1.0, see `LICENSES/CC0-1.0.txt`.
