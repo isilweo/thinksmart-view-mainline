@@ -56,11 +56,14 @@ Not done: echo cancellation, beamforming with the two DMICs.
 Datacolor SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and
 6500 K, flat-fielded with the grey back of the chart. Median CIE76 error after
 correction is 3.9-5.8 (`libcamera/s5kc505a-full-ccm.yaml`). In live use the
-soft ISP of libcamera 0.7.1 turns clipped highlights pink with the full
-matrices and amplifies grey-world AWB errors, so the default file blends them
-50/50 with the identity. The soft ISP AGC has no manual exposure, exposure
-compensation or highlight protection, so bright objects on a dark background
-clip.
+soft ISP turns clipped highlights pink with the full matrices and amplifies
+grey-world AWB errors, so the default file blends them 50/50 with the
+identity. The soft ISP AGC in libcamera 0.7.1 has no manual exposure,
+exposure compensation or highlight protection, so bright objects on a dark
+background clip. libcamera 0.8.0 moved it to the common libipa AGC: manual
+`ExposureTime`/`AnalogueGain` and `ExposureValue` work on this camera (EV -1
+cut clipped pixels from 1.06% to 0.02% in a desk scene), and it adds lens
+shading correction.
 
 The two DMICs are quiet: we apply a software gain of 4 (`volume volume=4.0`)
 before encoding.
@@ -92,11 +95,15 @@ In pmaports (v26.06):
 1. copy `kernel/series/*.patch` (and `kernel/third-party/tas5782m-support.diff`
    for the speaker) into `device/community/linux-postmarketos-qcom-msm8953/`,
    add them to `source=` and apply `kernel/config.fragment`;
-2. libcamera (`temp/libcamera`, 0.7.1): add the S5KC505A sensor helper from
-   rebrch/tsv-nura,
+2. libcamera: we use 0.8.0 (the `temp/libcamera` package of pmaports master);
+   0.7.1 works as well. Add the S5KC505A sensor helper from rebrch/tsv-nura,
    [`camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch`](https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch)
-   (we use it unchanged apart from a comment), and `libcamera/s5kc505a.yaml`
-   to the tuning files (installed as `/usr/share/libcamera/ipa/simple/s5kc505a.yaml`);
+   (it applies unchanged to 0.7.1 and 0.8.0), and `libcamera/s5kc505a.yaml`
+   to the tuning files (installed under `/usr/share/libcamera/ipa/softisp/` on
+   0.8.0, `ipa/simple/` on 0.7.1). On v26.06, PipeWire from Alpine 3.24 is
+   built against libcamera 0.7 and blocks the upgrade; we rebuilt PipeWire
+   1.6.11 from Alpine edge (it carries a libcamera 0.8 compatibility patch),
+   without the onnx filter-graph subpackage, which needs onnxruntime;
 3. `soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10), otherwise
    apk may pick `alsa-ucm-conf-unisoc-ums9230`;
 4. `pmbootstrap checksum`, `pmbootstrap build`.
