@@ -1,0 +1,35 @@
+From 3c31729c56a795e93b526d11ab687d812a47fd96 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:14 +0100
+Subject: [PATCH 01/22] clk: qcom: gcc-msm8953: drop HW_CTRL from
+ venus_core0_gdsc
+
+The vendor kernel runs Venus on MSM8953 with software power collapse only
+(qcom,sw-power-collapse, no hardware trigger on venus-core0). With HW_CTRL
+on venus_core0_gdsc the encoder core stalled after about 1.5 s on every
+second run, and at QP 51 the whole board hung.
+
+This goes together with "media: venus: use software power collapse only
+on MSM8953". Tested on Lenovo ThinkSmart View (APQ8053, Venus firmware
+VIDEO.VE.4.2).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/clk/qcom/gcc-msm8953.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/clk/qcom/gcc-msm8953.c b/drivers/clk/qcom/gcc-msm8953.c
+index c4ec995..de228a7 100644
+--- a/drivers/clk/qcom/gcc-msm8953.c
++++ b/drivers/clk/qcom/gcc-msm8953.c
+@@ -3873,7 +3873,6 @@ static struct gdsc venus_core0_gdsc = {
+ 	.pd = {
+ 		.name = "venus_core0",
+ 	},
+-	.flags = HW_CTRL,
+ 	.pwrsts = PWRSTS_OFF_ON,
+ };
+ 
+-- 
+2.54.0 (Apple Git-157)
+

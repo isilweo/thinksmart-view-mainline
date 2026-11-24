@@ -1,0 +1,89 @@
+From 310d4c65937a370c4e6b65f37ff906af3d8287eb Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 16/22] iio: light: vcnl4000: use low-power IR LED settings on
+ the VCNL4200
+
+The driver programs the VCNL4200 with 8 pulses of 120 mA at duty 1/160.
+Since PS is powered together with ALS, the IR LED is driven even when
+only the illuminance is read, and on the Lenovo ThinkSmart View it gets
+noticeably warm (the device tree had the sensor disabled for that
+reason).
+
+Use the settings of the stock Lenovo firmware (sns_dd_vcnl4200 on the
+ADSP): 2 pulses of 75 mA, PS_IT 8T and duty 1/1280, and adjust the PS
+sampling period accordingly. Proximity still detects a hand at
+5-10 cm with large margin (about 800-1800 counts vs. 0-60 background).
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/iio/light/vcnl4000.c | 32 +++++++++++++++++++++++++++++---
+ 1 file changed, 29 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
+index 7658a4d..36fd635 100644
+--- a/drivers/iio/light/vcnl4000.c
++++ b/drivers/iio/light/vcnl4000.c
+@@ -123,6 +123,19 @@
+ 	(FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4040_CONF3_PS_MPS_16BITS) | \
+ 	 FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4040_CONF3_PS_LED_I_16BITS))
+ 
++/*
++ * VCNL4200: low-power IR LED settings. 8 pulses of 120 mA at duty 1/160 make
++ * the LED run hot, and PS is powered together with ALS (set_power_state), so
++ * the LED is driven even when only illuminance is read. Use the values of the
++ * stock Lenovo firmware (sns_dd_vcnl4200 on the ADSP): 2 pulses of 75 mA,
++ * PS_IT 8T, duty 1/1280.
++ */
++#define VCNL4200_PS_CONF1_PS_DUTY	GENMASK(7, 6)
++#define VCNL4200_PS_DUTY_1_1280		3
++#define VCNL4200_PS_IT_8T		4
++#define VCNL4200_PS_LED_I_75MA		1
++#define VCNL4200_PS_MPS_2		1
++
+ static const char * const vcnl4000_supplies[] = { "vdd", "vddio" };
+ 
+ static const int vcnl4010_prox_sampling_frequency[][2] = {
+@@ -388,8 +401,8 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 	case VCNL4200_PROD_ID:
+ 		/* Default wait time is 50ms, add 20% tolerance. */
+ 		data->vcnl4200_al.sampling_rate = ktime_set(0, 60000 * 1000);
+-		/* Default wait time is 4.8ms, add 20% tolerance. */
+-		data->vcnl4200_ps.sampling_rate = ktime_set(0, 5760 * 1000);
++		/* 4.8 ms x 8 (duty 1/1280) x 8 (PS_IT 8T), add 20% tolerance. */
++		data->vcnl4200_ps.sampling_rate = ktime_set(0, 368640 * 1000);
+ 		break;
+ 	case VCNL4040_PROD_ID:
+ 		/* Default wait time is 80ms, add 20% tolerance. */
+@@ -409,6 +422,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 		return ret;
+ 
+ 	regval = ret | VCNL4040_PS_CONF2_PS_HD;
++	if (id == VCNL4200_PROD_ID) {
++		regval &= ~VCNL4200_PS_CONF1_PS_DUTY;
++		regval &= ~VCNL4040_PS_CONF2_PS_IT;
++		regval |= FIELD_PREP(VCNL4200_PS_CONF1_PS_DUTY,
++				     VCNL4200_PS_DUTY_1_1280) |
++			  FIELD_PREP(VCNL4040_PS_CONF2_PS_IT, VCNL4200_PS_IT_8T);
++	}
+ 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF1,
+ 					regval);
+ 	if (ret < 0)
+@@ -419,7 +439,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
++	if (id == VCNL4200_PROD_ID) {
++		regval = ret & ~(VCNL4040_PS_CONF3_MPS | VCNL4040_PS_MS_LED_I);
++		regval |= FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4200_PS_MPS_2) |
++			  FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4200_PS_LED_I_75MA);
++	} else {
++		regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
++	}
+ 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF3,
+ 					regval);
+ 	if (ret < 0)
+-- 
+2.54.0 (Apple Git-157)
+

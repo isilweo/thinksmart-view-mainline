@@ -1,0 +1,140 @@
+From be49223c9230f6e7162de60164a11a8bb85d4250 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 22/22] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
+ front camera
+
+Describe the Samsung S5KC505A front camera on CCI0 (address 0x37) and
+CSIPHY0 (2 lanes, 480 MHz link frequency), with supplies and GPIOs as in
+the stock Lenovo DT:
+- cam_vdig (GPIO118, from L2 at 1.2 V), cam_vana (GPIO119, from L17),
+- cam_vcore (GPIO134) and CAM_STANDBY0 (GPIO39) modelled as a chain of
+  fixed regulators, as ccs only handles the reset GPIO (GPIO40),
+- MCLK0 at 24 MHz.
+
+L2 is fixed to 1.2 V as the stock qcom,cam-vreg-min/max-voltage.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ .../dts/qcom/apq8053-lenovo-cd-18781y.dts     | 101 +++++++++++++++++-
+ 1 file changed, 99 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+index 0b4790e..aae5f6e 100644
+--- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
++++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+@@ -470,8 +470,9 @@
+ 		};
+ 
+ 		pm8953_l2: l2 {
+-			regulator-min-microvolt = <975000>;
+-			regulator-max-microvolt = <1225000>;
++			/* camera cam_vdig, 1.2 V in the stock DT (qcom,cam-vreg-min/max-voltage) */
++			regulator-min-microvolt = <1200000>;
++			regulator-max-microvolt = <1200000>;
+ 			regulator-always-on;
+ 		};
+ 
+@@ -754,3 +755,99 @@
+ &usb3 {
+ 	status = "okay";
+ };
++
++/*
++ * Samsung S5KC505A front camera (slot 0, CCI address 0x37), driven by ccs with
++ * a quirk. Supplies and pins follow the stock Lenovo DT (qcom,camera@0).
++ */
++/ {
++	cam_vdig: cam-vdig-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vdig";
++		gpio = <&tlmm 118 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&pm8953_l2>;
++	};
++
++	cam_vana: cam-vana-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vana";
++		gpio = <&tlmm 119 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&pm8953_l17>;
++	};
++
++	cam_vcore: cam-vcore-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vcore";
++		gpio = <&tlmm 134 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&cam_vdig>;
++	};
++
++	/*
++	 * CAM_STANDBY0 (GPIO39, gpio-standby of camera 0 in the stock DT), high =
++	 * active. ccs only handles reset-gpios (xshutdown, GPIO40), so standby is
++	 * modelled as the last link of the vcore chain: GPIO118 -> GPIO134 ->
++	 * GPIO39, then MCLK and reset release, as in the Lenovo driver.
++	 */
++	cam_standby: cam-standby-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_standby";
++		gpio = <&tlmm 39 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		startup-delay-us = <1000>;
++		vin-supply = <&cam_vcore>;
++	};
++};
++
++&cci {
++	status = "okay";
++};
++
++&cci_i2c0 {
++	camera@37 {
++		/* s5kc505a: CCS 0.8, ident 0x00/0x5034, quirk in ccs-quirk.c */
++		compatible = "mipi-ccs-1.0", "mipi-ccs";
++		reg = <0x37>;
++
++		clocks = <&gcc GCC_CAMSS_MCLK0_CLK>;
++		assigned-clocks = <&gcc MCLK0_CLK_SRC>;
++		assigned-clock-rates = <24000000>;
++		clock-frequency = <24000000>;
++
++		pinctrl-0 = <&camss_mclk0_default>;
++		pinctrl-names = "default";
++
++		vcore-supply = <&cam_standby>;
++		vio-supply = <&pm8953_l6>;
++		vana-supply = <&cam_vana>;
++		reset-gpios = <&tlmm 40 GPIO_ACTIVE_LOW>;
++
++		rotation = <270>;
++		orientation = <0>;
++
++		port {
++			cam_s5kc505a_ep: endpoint {
++				remote-endpoint = <&camss_csiphy0_ep>;
++				data-lanes = <1 2>;
++				link-frequencies = /bits/ 64 <480000000>;
++			};
++		};
++	};
++};
++
++&camss {
++	status = "okay";
++
++	ports {
++		port@0 {
++			reg = <0>;
++
++			camss_csiphy0_ep: endpoint {
++				remote-endpoint = <&cam_s5kc505a_ep>;
++				data-lanes = <0 1>;
++			};
++		};
++	};
++};
+-- 
+2.54.0 (Apple Git-157)
+

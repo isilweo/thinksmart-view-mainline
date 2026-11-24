@@ -1,0 +1,84 @@
+From 67ab58495ed1dc05cb574a03ea90ba23aa8a0afe Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:14 +0100
+Subject: [PATCH 03/22] media: venus: use software power collapse only on
+ MSM8953
+
+The vendor kernel uses software power collapse only on MSM8953 (Venus
+3.x). Sending SYS_POWER_CONTROL and handing the vcodec power control to
+the hardware made the encoder hang mid-stream every so often (VPP never
+going idle).
+
+Skip SYS_POWER_CONTROL and keep the vcodec power control under software
+control for qcom,msm8953-venus.
+
+HACK: matching the compatible in the driver is not the right way; this
+should become a flag in the per-SoC resources.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/qcom/venus/hfi_venus.c  | 17 +++++++++++++----
+ drivers/media/platform/qcom/venus/pm_helpers.c |  5 +++++
+ 2 files changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/venus/hfi_venus.c b/drivers/media/platform/qcom/venus/hfi_venus.c
+index bd82066..518e3e7 100644
+--- a/drivers/media/platform/qcom/venus/hfi_venus.c
++++ b/drivers/media/platform/qcom/venus/hfi_venus.c
+@@ -10,6 +10,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/iopoll.h>
+ #include <linux/kernel.h>
++#include <linux/of.h>
+ #include <linux/slab.h>
+ 
+ #include "core.h"
+@@ -960,10 +961,18 @@ static int venus_sys_set_default_properties(struct venus_hfi_device *hdev)
+ 			dev_warn(dev, "setting idle response ON failed (%d)\n", ret);
+ 	}
+ 
+-	ret = venus_sys_set_power_control(hdev, venus_fw_low_power_mode);
+-	if (ret)
+-		dev_warn(dev, "setting hw power collapse ON failed (%d)\n",
+-			 ret);
++	/*
++	 * MSM8953 (Venus 3.x) uses software power collapse only in the vendor
++	 * kernel (qcom,sw-power-collapse, no hw-trigger on venus-core0), so do
++	 * not send SYS_POWER_CONTROL. Hardware power collapse of the core
++	 * between frames hung the encoder every so often (VPP never idle).
++	 */
++	if (!of_device_is_compatible(dev->of_node, "qcom,msm8953-venus")) {
++		ret = venus_sys_set_power_control(hdev, venus_fw_low_power_mode);
++		if (ret)
++			dev_warn(dev, "setting hw power collapse ON failed (%d)\n",
++				 ret);
++	}
+ 
+ 	/* For specific venus core, it is mandatory to set the UBWC configuration */
+ 	if (res->ubwc_conf) {
+diff --git a/drivers/media/platform/qcom/venus/pm_helpers.c b/drivers/media/platform/qcom/venus/pm_helpers.c
+index f026952..b98c633 100644
+--- a/drivers/media/platform/qcom/venus/pm_helpers.c
++++ b/drivers/media/platform/qcom/venus/pm_helpers.c
+@@ -8,6 +8,7 @@
+ #include <linux/interconnect.h>
+ #include <linux/iopoll.h>
+ #include <linux/kernel.h>
++#include <linux/of.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_opp.h>
+ #include <linux/pm_runtime.h>
+@@ -345,6 +346,10 @@ vcodec_control_v3(struct venus_core *core, u32 session_type, bool enable)
+ 	else
+ 		ctrl = core->wrapper_base + WRAPPER_VENC_VCODEC_POWER_CONTROL;
+ 
++	/* MSM8953: keep the core under software control, as the vendor kernel does */
++	if (of_device_is_compatible(core->dev->of_node, "qcom,msm8953-venus"))
++		enable = true;
++
+ 	if (enable)
+ 		writel(0, ctrl);
+ 	else
+-- 
+2.54.0 (Apple Git-157)
+

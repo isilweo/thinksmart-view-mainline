@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: CC0-1.0
+# Samsung S5KC505A (Lenovo ThinkSmart View): black level 64 at 10 bits = 4096 at 16 bits
+%YAML 1.1
+---
+version: 1
+algorithms:
+  - BlackLevel:
+      blackLevel: 4096
+  - Awb:
+  - Adjust:
+  - Agc:
+...

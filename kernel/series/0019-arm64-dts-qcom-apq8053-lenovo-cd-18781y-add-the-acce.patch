@@ -1,0 +1,36 @@
+From 37a9960fc5685ec235373cda221c00790c4f0b8d Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 19/22] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
+ accelerometer mount matrix
+
+Map the bma253 axes to the panel (native portrait). Verified with
+iio-sensor-proxy: the device standing in landscape reports left-up.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+index 0487c33..6413903 100644
+--- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
++++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+@@ -91,6 +91,14 @@
+ 			vdd-supply = <&pm8953_l10>;
+ 			vddio-supply = <&pm8953_l6>;
+ 
++			/*
++			 * Axes relative to the panel (native portrait); verified with
++			 * iio-sensor-proxy: device standing in landscape = left-up.
++			 */
++			mount-matrix = "0", "-1", "0",
++				       "1", "0", "0",
++				       "0", "0", "1";
++
+ 			pinctrl-0 = <&accel_int_default>;
+ 			pinctrl-names = "default";
+ 		};
+-- 
+2.54.0 (Apple Git-157)
+

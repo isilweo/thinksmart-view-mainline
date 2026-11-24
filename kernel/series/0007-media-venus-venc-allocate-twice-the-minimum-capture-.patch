@@ -1,0 +1,40 @@
+From fda11cd3aedc8b6cec26475c621027b479491976 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 07/22] media: venus: venc: allocate twice the minimum capture
+ buffers
+
+Capture buffers added after streaming started (VIDIOC_CREATE_BUFS) are
+rejected in buf_prepare with -EBUSY, as the firmware only knows the
+count set at REQBUFS. GStreamer asks for the minimum and then adds one
+more right away, so encoding never started.
+
+Allocate twice the minimum up front.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/qcom/venus/venc.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
+index 5aa32ab..b82b443 100644
+--- a/drivers/media/platform/qcom/venus/venc.c
++++ b/drivers/media/platform/qcom/venus/venc.c
+@@ -1193,7 +1193,13 @@ static int venc_queue_setup(struct vb2_queue *q,
+ 		break;
+ 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+ 		*num_planes = inst->fmt_cap->num_planes;
+-		*num_buffers = max(*num_buffers, min);
++		/*
++		 * Buffers added after start (CREATE_BUFS) are rejected by
++		 * buf_prepare (-EBUSY; the firmware only knows the REQBUFS
++		 * count), and GStreamer adds a fifth one right away when given
++		 * only the minimum. Allocate headroom up front.
++		 */
++		*num_buffers = max(*num_buffers, 2 * min);
+ 		inst->num_output_bufs = *num_buffers;
+ 		sizes[0] = venus_helper_get_framesz(inst->fmt_cap->pixfmt,
+ 						    inst->width,
+-- 
+2.54.0 (Apple Git-157)
+

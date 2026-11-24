@@ -1,0 +1,48 @@
+From 5783826a27fdd5fca4d0192bfab5a93e867d199c Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 05/22] media: venus: venc: base rate control on the frame rate
+ on Venus 3.x
+
+GStreamer's v4l2h264enc puts whole seconds (0, 1, 2 s) into the buffer
+timestamps. With timestamp based rate control the firmware then sees
+1 fps and produced about 21 Mb/s for a 1 Mb/s target.
+
+Set HFI_PROPERTY_PARAM_VENC_DISABLE_RC_TIMESTAMP on Venus 3.x so rate
+control uses the configured frame rate. Tested on MSM8953 with 1280x960
+camera input for 20 s, 4 runs each: 1 Mb/s gives 931-959 kb/s, 2 Mb/s
+gives 1786-1836 kb/s.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/qcom/venus/venc.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
+index 6871cc8..bf2a401 100644
+--- a/drivers/media/platform/qcom/venus/venc.c
++++ b/drivers/media/platform/qcom/venus/venc.c
+@@ -704,6 +704,20 @@ static int venc_set_properties(struct venus_inst *inst)
+ 	if (ret)
+ 		return ret;
+ 
++	/*
++	 * Base rate control on FRAME_RATE, not on buffer timestamps.
++	 * GStreamer (v4l2h264enc) puts whole seconds (0, 1, 2 s) in the
++	 * timestamps, so the firmware saw 1 fps and produced ~20x the bitrate.
++	 */
++	if (IS_V3(inst->core)) {
++		en.enable = 1;
++		ret = hfi_session_set_property(inst,
++					       HFI_PROPERTY_PARAM_VENC_DISABLE_RC_TIMESTAMP,
++					       &en);
++		if (ret)
++			return ret;
++	}
++
+ 	if (inst->fmt_cap->pixfmt == V4L2_PIX_FMT_H264) {
+ 		struct hfi_h264_vui_timing_info info;
+ 		struct hfi_h264_entropy_control entropy;
+-- 
+2.54.0 (Apple Git-157)
+

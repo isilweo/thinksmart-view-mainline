@@ -1,0 +1,5 @@
+# On top of the postmarketOS qcom-msm8953 kernel config
+CONFIG_VIDEO_CCS=m
+CONFIG_VIDEO_CCS_PLL=m
+CONFIG_SND_SOC_TAS5805M=m
+CONFIG_VCNL4000=m

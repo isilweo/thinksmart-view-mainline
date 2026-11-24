@@ -1,0 +1,31 @@
+From 24096449bf704158477810d900a784205b2cfcdd Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 17/22] iio: light: vcnl4000: autosuspend right after probe
+
+The sensor stays powered after probe until the first read. Mark the
+device busy and request autosuspend at the end of probe so it powers
+down after VCNL4000_SLEEP_DELAY_MS like after any other access.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/iio/light/vcnl4000.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
+index 36fd635..0c319ee 100644
+--- a/drivers/iio/light/vcnl4000.c
++++ b/drivers/iio/light/vcnl4000.c
+@@ -2068,6 +2068,9 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	pm_runtime_enable(&client->dev);
+ 	pm_runtime_set_autosuspend_delay(&client->dev, VCNL4000_SLEEP_DELAY_MS);
+ 	pm_runtime_use_autosuspend(&client->dev);
++	/* Power the sensor down after SLEEP_DELAY, not only after the first read */
++	pm_runtime_mark_last_busy(&client->dev);
++	pm_request_autosuspend(&client->dev);
+ 
+ 	return 0;
+ fail_poweroff:
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,63 @@
+From 5ededb69825593cb3d03734f0423627b7a9c73ac Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 15/22] iio: light: vcnl4000: enable the vdd and vddio supplies
+
+On the Lenovo ThinkSmart View the VCNL4200 shares its LDOs with the
+bma253 accelerometer. When vcnl4000 probes first the sensor is still
+unpowered, NAKs on I2C and probe fails with -ENXIO, so the sensor is
+missing until the next boot.
+
+Get and enable the vdd and vddio supplies (dummy regulators when absent
+from the DT) and wait for the sensor to power up.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/iio/light/vcnl4000.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
+index a36c238..7658a4d 100644
+--- a/drivers/iio/light/vcnl4000.c
++++ b/drivers/iio/light/vcnl4000.c
+@@ -23,6 +23,7 @@
+ #include <linux/err.h>
+ #include <linux/delay.h>
+ #include <linux/pm_runtime.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/interrupt.h>
+ #include <linux/units.h>
+ 
+@@ -122,6 +123,8 @@
+ 	(FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4040_CONF3_PS_MPS_16BITS) | \
+ 	 FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4040_CONF3_PS_LED_I_16BITS))
+ 
++static const char * const vcnl4000_supplies[] = { "vdd", "vddio" };
++
+ static const int vcnl4010_prox_sampling_frequency[][2] = {
+ 	{1, 950000},
+ 	{3, 906250},
+@@ -1959,6 +1962,20 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	if (!indio_dev)
+ 		return -ENOMEM;
+ 
++	/*
++	 * Enable vdd/vddio. Without this, probe can run before another
++	 * consumer (here the bma253) has turned the shared LDOs on: the
++	 * sensor NAKs, probe fails with -ENXIO and the sensor is gone until
++	 * the next boot. Missing DT entries resolve to dummy regulators.
++	 */
++	ret = devm_regulator_bulk_get_enable(&client->dev,
++					     ARRAY_SIZE(vcnl4000_supplies),
++					     vcnl4000_supplies);
++	if (ret)
++		return dev_err_probe(&client->dev, ret,
++				     "failed to enable regulators\n");
++	fsleep(10000); /* VCNL4200 power-up time is < 3 ms */
++
+ 	data = iio_priv(indio_dev);
+ 	i2c_set_clientdata(client, indio_dev);
+ 	data->client = client;
+-- 
+2.54.0 (Apple Git-157)
+

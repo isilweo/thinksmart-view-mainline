@@ -1,0 +1,50 @@
+From 2a59ab3425536176dee738e61bccda9625aac484 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 09/22] media: venus: vdec: resume the core before a decoder
+ command
+
+After about 2 s without buffers runtime PM has cut the vcodec clocks.
+Sending EOS (V4L2_DEC_CMD_STOP) to the firmware in that state hangs the
+whole SoC on MSM8953; the board then resets through the secure watchdog
+about 45 s later. This happens whenever an RTP stream feeding the decoder
+stops and the pipeline is shut down with EOS.
+
+Take a runtime PM reference around the decoder command.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/qcom/venus/vdec.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/venus/vdec.c b/drivers/media/platform/qcom/venus/vdec.c
+index 4cb6920..d7a1459 100644
+--- a/drivers/media/platform/qcom/venus/vdec.c
++++ b/drivers/media/platform/qcom/venus/vdec.c
+@@ -545,6 +545,8 @@ static int vdec_subscribe_event(struct v4l2_fh *fh,
+ 	}
+ }
+ 
++static int vdec_pm_get_put(struct venus_inst *inst);
++
+ static int
+ vdec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cmd)
+ {
+@@ -557,6 +559,14 @@ vdec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cmd)
+ 	if (ret)
+ 		return ret;
+ 
++	/*
++	 * After 2 s without buffers runtime PM has cut the vcodec clocks;
++	 * sending EOS to the firmware in that state hangs the whole SoC.
++	 */
++	ret = vdec_pm_get_put(inst);
++	if (ret)
++		return ret;
++
+ 	mutex_lock(&inst->lock);
+ 
+ 	if (cmd->cmd == V4L2_DEC_CMD_STOP) {
+-- 
+2.54.0 (Apple Git-157)
+

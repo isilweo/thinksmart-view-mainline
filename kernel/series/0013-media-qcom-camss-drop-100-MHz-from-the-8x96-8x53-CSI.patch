@@ -1,0 +1,66 @@
+From 217d5ca5f70612ed4f573c0f6cb9c84ebdbe20cf Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 14:16:15 +0100
+Subject: [PATCH 13/22] media: qcom: camss: drop 100 MHz from the 8x96/8x53
+ CSIPHY timer clocks
+
+On MSM8953 the CSIPHY timer does not come up at 100 MHz (GPLL0_DIV2) and
+no frames arrive. Start at 200 MHz.
+
+The table is shared by 8x96 and 8x53, so this also changes 8x96, which
+has not been tested. A proper fix would give 8x53 its own table.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/platform/qcom/camss/camss.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
+index eba1fa7..7deba48 100644
+--- a/drivers/media/platform/qcom/camss/camss.c
++++ b/drivers/media/platform/qcom/camss/camss.c
+@@ -462,6 +462,11 @@ static const struct resources_icc icc_res_8x53[] = {
+ 	},
+ };
+ 
++/*
++ * This table is shared by 8x96 and 8x53, so the CSIPHY timer clock change
++ * below affects both. Only tested on MSM8953; a proper fix would give 8x53
++ * its own table.
++ */
+ static const struct camss_subdev_resources csiphy_res_8x96[] = {
+ 	/* CSIPHY0 */
+ 	{
+@@ -470,7 +475,8 @@ static const struct camss_subdev_resources csiphy_res_8x96[] = {
+ 		.clock_rate = { { 0 },
+ 				{ 0 },
+ 				{ 0 },
+-				{ 100000000, 200000000, 266666667 } },
++				/* MSM8953: 100 MHz (GPLL0_DIV2) does not come up */
++				{ 200000000, 266666667 } },
+ 		.reg = { "csiphy0", "csiphy0_clk_mux" },
+ 		.interrupt = { "csiphy0" },
+ 		.csiphy = {
+@@ -487,7 +493,8 @@ static const struct camss_subdev_resources csiphy_res_8x96[] = {
+ 		.clock_rate = { { 0 },
+ 				{ 0 },
+ 				{ 0 },
+-				{ 100000000, 200000000, 266666667 } },
++				/* MSM8953: 100 MHz (GPLL0_DIV2) does not come up */
++				{ 200000000, 266666667 } },
+ 		.reg = { "csiphy1", "csiphy1_clk_mux" },
+ 		.interrupt = { "csiphy1" },
+ 		.csiphy = {
+@@ -504,7 +511,8 @@ static const struct camss_subdev_resources csiphy_res_8x96[] = {
+ 		.clock_rate = { { 0 },
+ 				{ 0 },
+ 				{ 0 },
+-				{ 100000000, 200000000, 266666667 } },
++				/* MSM8953: 100 MHz (GPLL0_DIV2) does not come up */
++				{ 200000000, 266666667 } },
+ 		.reg = { "csiphy2", "csiphy2_clk_mux" },
+ 		.interrupt = { "csiphy2" },
+ 		.csiphy = {
+-- 
+2.54.0 (Apple Git-157)
+
