@@ -1,7 +1,7 @@
-From a8af73f021732763e53e341bb0929c0fe63327d4 Mon Sep 17 00:00:00 2001
+From f60a0c07ff02f2a48365658bc6b7fd0f3bdd5c29 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 20/28] media: qcom: camss: drop the low VFE clock levels on
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 22/32] media: qcom: camss: drop the low VFE clock levels on
  MSM8953
 
 For RDI the computed VFE rate is about 45 MHz, which cannot keep up with
@@ -18,7 +18,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 4 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
-index 85c4404..56b76d8 100644
+index b57108c..d7eaf77 100644
 --- a/drivers/media/platform/qcom/camss/camss.c
 +++ b/drivers/media/platform/qcom/camss/camss.c
 @@ -452,9 +452,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {

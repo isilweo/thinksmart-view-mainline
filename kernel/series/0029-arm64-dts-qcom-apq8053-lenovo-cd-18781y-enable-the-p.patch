@@ -1,7 +1,7 @@
-From 1312abb8b027d361c9a919bfffcc9d26081b624e Mon Sep 17 00:00:00 2001
+From 8be900558da1d8582d13c6ba1243c01a9dd647ba Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 27/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable the
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 29/32] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable the
  proximity sensor
 
 With the vcnl4000 driver using low-power IR LED settings on the VCNL4200

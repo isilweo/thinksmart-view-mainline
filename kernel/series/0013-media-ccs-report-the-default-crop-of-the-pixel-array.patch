@@ -1,0 +1,39 @@
+From bee7ca2a66d3681ac8ea1c984ed60b15bedf3ff5 Mon Sep 17 00:00:00 2001
+From: Lech Piekarski <isilweo@gmail.com>
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 13/32] media: ccs: report the default crop of the pixel array
+
+libcamera reads V4L2_SEL_TGT_CROP_DEFAULT on the pixel array to learn the
+active area and logs an error when the driver does not support it.
+ccs_init_state() initialises the crop of the pixel array source pad to
+the native size, which is also what CROP_BOUNDS reports; return that
+rectangle as the default crop. Setting it is still rejected.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/media/i2c/ccs/ccs-core.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/i2c/ccs/ccs-core.c b/drivers/media/i2c/ccs/ccs-core.c
+index 5d4e30a..ef9f189 100644
+--- a/drivers/media/i2c/ccs/ccs-core.c
++++ b/drivers/media/i2c/ccs/ccs-core.c
+@@ -2518,6 +2518,7 @@ static int ccs_sel_supported(struct v4l2_subdev *subdev,
+ 			return 0;
+ 		return -EINVAL;
+ 	case V4L2_SEL_TGT_NATIVE_SIZE:
++	case V4L2_SEL_TGT_CROP_DEFAULT:
+ 		if (ssd == sensor->pixel_array && sel->pad == CCS_PA_PAD_SRC)
+ 			return 0;
+ 		return -EINVAL;
+@@ -2632,6 +2633,7 @@ static int ccs_get_selection(struct v4l2_subdev *subdev,
+ 	switch (sel->target) {
+ 	case V4L2_SEL_TGT_CROP_BOUNDS:
+ 	case V4L2_SEL_TGT_NATIVE_SIZE:
++	case V4L2_SEL_TGT_CROP_DEFAULT:
+ 		if (ssd == sensor->pixel_array) {
+ 			ccs_get_native_size(ssd, &sel->r);
+ 		} else if (sel->pad == ssd->sink_pad) {
+-- 
+2.54.0 (Apple Git-157)
+

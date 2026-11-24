@@ -1,7 +1,7 @@
-From 85383322ed8dd3f54ca40bb6fa13f94664156443 Mon Sep 17 00:00:00 2001
+From 786a972246381902822d11a890df157bb6c0b770 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 05/28] media: venus: venc: base rate control on the frame rate
+Date: Tue, 24 Nov 2026 19:38:35 +0100
+Subject: [PATCH 05/32] media: venus: venc: base rate control on the frame rate
  on Venus 3.x
 
 GStreamer's v4l2h264enc puts whole seconds (0, 1, 2 s) into the buffer

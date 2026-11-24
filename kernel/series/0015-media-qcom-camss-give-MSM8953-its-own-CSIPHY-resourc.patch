@@ -1,7 +1,7 @@
-From b55be8cef2715f2c81057d9c5ad36fdcff58f9c3 Mon Sep 17 00:00:00 2001
+From a8a45c5c9858f5edf30559a45d0fc1b3d554109b Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 13/28] media: qcom: camss: give MSM8953 its own CSIPHY
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 15/32] media: qcom: camss: give MSM8953 its own CSIPHY
  resources
 
 MSM8953 and SDM450 reuse the MSM8996 CSIPHY table. On MSM8953 the CSIPHY
@@ -16,7 +16,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 57 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
-index eba1fa7..99f5d70 100644
+index d9050d8..1e3ffee 100644
 --- a/drivers/media/platform/qcom/camss/camss.c
 +++ b/drivers/media/platform/qcom/camss/camss.c
 @@ -390,6 +390,59 @@ static const struct camss_subdev_resources ispif_res_8x53 = {
@@ -79,7 +79,7 @@ index eba1fa7..99f5d70 100644
  static const struct camss_subdev_resources vfe_res_8x53[] = {
  	/* VFE0 */
  	{
-@@ -5102,11 +5155,11 @@ static const struct camss_resources sdm450_resources = {
+@@ -5128,11 +5181,11 @@ static const struct camss_resources sdm450_resources = {
  	.version = CAMSS_8x53,
  	.icc_res = icc_res_8x53,
  	.icc_path_num = ARRAY_SIZE(icc_res_8x53),
@@ -93,7 +93,7 @@ index eba1fa7..99f5d70 100644
  	.csid_num = MIN(2, ARRAY_SIZE(csid_res_8x53)),
  	.vfe_num = ARRAY_SIZE(vfe_res_8x53),
  };
-@@ -5115,11 +5168,11 @@ static const struct camss_resources msm8953_resources = {
+@@ -5141,11 +5194,11 @@ static const struct camss_resources msm8953_resources = {
  	.version = CAMSS_8x53,
  	.icc_res = icc_res_8x53,
  	.icc_path_num = ARRAY_SIZE(icc_res_8x53),

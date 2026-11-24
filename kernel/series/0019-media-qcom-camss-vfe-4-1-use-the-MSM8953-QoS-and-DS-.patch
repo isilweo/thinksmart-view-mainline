@@ -1,7 +1,7 @@
-From 508ce71d2679707b2f444d1528d9e90e14911de6 Mon Sep 17 00:00:00 2001
+From b5f3ba2ff87bd15c70747d9c12ddb88eb249724b Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 17/28] media: qcom: camss: vfe-4-1: use the MSM8953 QoS and DS
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 19/32] media: qcom: camss: vfe-4-1: use the MSM8953 QoS and DS
  settings
 
 Use the bus QoS and DS values of the vendor MSM8953 device tree

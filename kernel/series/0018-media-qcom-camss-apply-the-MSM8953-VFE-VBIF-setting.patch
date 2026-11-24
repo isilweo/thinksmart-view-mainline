@@ -1,7 +1,7 @@
-From 79ba157e47dfd89e874ef2e5831125328380c145 Mon Sep 17 00:00:00 2001
+From 35c1b7210f75d89357f3e70311eea0b01237bbd1 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 16/28] media: qcom: camss: apply the MSM8953 VFE VBIF setting
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 18/32] media: qcom: camss: apply the MSM8953 VFE VBIF setting
 
 Program the VBIF register of each MSM8953 VFE as the vendor software does
 (vbif-regs = <0x124>, vbif-settings = <0x3>). vfe_vbif_apply_settings()
@@ -101,7 +101,7 @@ index 6451891..c333439 100644
  	}
  
 diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
-index 99f5d70..85c4404 100644
+index 1e3ffee..b57108c 100644
 --- a/drivers/media/platform/qcom/camss/camss.c
 +++ b/drivers/media/platform/qcom/camss/camss.c
 @@ -464,6 +464,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {

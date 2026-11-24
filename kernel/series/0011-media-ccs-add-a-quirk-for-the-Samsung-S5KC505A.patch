@@ -1,7 +1,7 @@
-From c63eed8be2be1fe5d357911faeca4e084a800d38 Mon Sep 17 00:00:00 2001
+From 91019f290f78547e51b08a11b49bb50e2b55cbf9 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 11/28] media: ccs: add a quirk for the Samsung S5KC505A
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 11/32] media: ccs: add a quirk for the Samsung S5KC505A
 
 The S5KC505A (front camera of the Lenovo ThinkSmart View) identifies as
 CCS 0.8 with module ident 0x00/0x5034. Its clock limit registers are

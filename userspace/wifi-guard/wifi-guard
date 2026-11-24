@@ -1,0 +1,68 @@
+#!/bin/sh
+# ath10k_sdio sometimes cannot talk to the QCA9379 at boot (-110: "timed out
+# while setting default block size", "unable to reset sdio", "Could not init
+# hif"). The card stays in that state across warm reboots, and rebinding the
+# SDIO function does not help. Rebinding the MMC host does: it switches the
+# card's vmmc supply off. A failure is a missing driver binding, or driver
+# timeouts while wlan0 is not up; a missing link alone (access point outage)
+# does not trigger it.
+TAG=wifi-guard
+S=/var/lib/wifi-guard
+VENDOR=0x0271 DEVICE=0x0801	# QCA9379
+FDRV=/sys/bus/sdio/drivers/ath10k_sdio
+HDRV=/sys/bus/platform/drivers/sdhci_msm
+HOST=7864900.mmc	# WLAN SDIO slot (sdhc_2)
+umask 077
+mkdir -p $S || exit 1
+chmod 700 $S; chmod 600 $S/* 2>/dev/null
+log() { logger -t $TAG "$*"; }
+
+find_f() {
+	F=
+	for d in /sys/bus/sdio/devices/*; do
+		[ "$(cat $d/vendor 2>/dev/null)" = $VENDOR ] && [ "$(cat $d/device 2>/dev/null)" = $DEVICE ] || continue
+		[ -z "$F" ] || return 2
+		F=$(basename $d)
+	done
+	[ -n "$F" ]
+}
+bound() { find_f && [ "$(basename "$(readlink /sys/bus/sdio/devices/$F/driver)")" = ath10k_sdio ]; }
+probed() { bound && [ -n "$(ls /sys/bus/sdio/devices/$F/net 2>/dev/null)" ]; }
+errors() { dmesg | grep -E "ath10k_sdio $F: .*(-110|timed out)" | grep -cvE 'install key|remove key'; }
+up() { [ "$(cat /sys/class/net/wlan0/operstate 2>/dev/null)" = up ]; }
+# Healthy: bound with an interface, and either the link is up or the driver
+# logged no new timeouts (a down link alone may be the access point).
+healthy() { probed && { up || [ "$(errors)" -le "$1" ]; }; }
+wait_up() { for s in $(seq 1 "$1"); do probed && up && return 0; sleep 1; done; return 1; }
+
+# Wait for the driver to load, then up to 60 s for a working wlan0
+# (15 s if the card is not bound at all).
+for s in $(seq 1 120); do [ -d $FDRV ] && break; sleep 1; done
+[ -d $FDRV ] || { log "ath10k_sdio did not load, doing nothing"; exit 0; }
+for s in $(seq 1 60); do
+	find_f; r=$?
+	[ $r = 2 ] && { log "more than one matching SDIO function, doing nothing"; exit 0; }
+	[ $r = 0 ] && probed && up && exit 0
+	[ $s -ge 15 ] && ! bound && break
+	sleep 1
+done
+healthy 0 && exit 0
+[ -n "$F" ] || { log "no SDIO function $VENDOR:$DEVICE after boot, doing nothing"; exit 0; }
+case "$(readlink -f /sys/bus/sdio/devices/$F)" in
+*/$HOST/mmc_host/*) ;;
+*) log "$F is not on $HOST, doing nothing"; exit 1;;
+esac
+
+ls -t $S/fail-*.log 2>/dev/null | tail -n +5 | xargs -r rm -f
+dmesg | grep -E 'mmc|sdio|ath10k' > $S/fail-$(date +%Y%m%d-%H%M%S).log
+log "$F is not working (driver binding or -110 errors), power cycling the MMC host"
+
+for i in 1 2; do
+	n=$(errors)
+	echo $HOST > $HDRV/unbind || log "unbind of $HOST failed"
+	sleep 3
+	echo $HOST > $HDRV/bind || log "bind of $HOST failed"
+	wait_up 60 || { sleep 20; healthy $n; } && { log "Wi-Fi back after power cycling $HOST ($i)"; exit 0; }
+done
+log "rebinding did not help, giving up"
+exit 1

@@ -1,7 +1,7 @@
-From 9f38e3b1dd20824f7aa33570a823ea88b52cb5a8 Mon Sep 17 00:00:00 2001
+From 1eb81c471f2c106f591ae48c33975053f362c732 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 09/28] media: venus: vdec: resume the core before a decoder
+Date: Tue, 24 Nov 2026 19:38:36 +0100
+Subject: [PATCH 09/32] media: venus: vdec: resume the core before a decoder
  command
 
 After about 2 s without buffers runtime PM has cut the vcodec clocks.

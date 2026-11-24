@@ -1,7 +1,7 @@
-From d772d463291bab39bc02e0ccd1ebfa4e66719afe Mon Sep 17 00:00:00 2001
+From e34285c10548a7320527da5754702b1b6aeca4ee Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:56:46 +0100
-Subject: [PATCH 06/28] media: venus: venc: only set the LTR mode when LTR
+Date: Tue, 24 Nov 2026 19:38:35 +0100
+Subject: [PATCH 06/32] media: venus: venc: only set the LTR mode when LTR
  frames are requested
 
 Setting HFI_LTR_MODE_MANUAL with ltr_count = 0 hangs the encoder core

@@ -23,10 +23,13 @@ comments and changelogs, and built and tested each kernel on the device
 while I directed the work, checked the results and decided what to keep.
 The q6asm-dai fix in `kernel/audio/` was diagnosed and written by Codex
 (OpenAI, gpt-6.2-astra) from the kernel sources and our logs, then built and
-tested on the device. The CAMSS rework (patches 0013-0020) was reviewed with Codex (OpenAI,
+tested on the device. The CAMSS rework (patches 0015-0022) was reviewed with Codex (OpenAI,
 gpt-6.2-astra), which found an off-by-one in the UB split, a missing
 height limit, a burst length difference on MSM8916/MSM8939 and a probe
-behaviour change on MSM8939; those were fixed before testing. Testing:
+behaviour change on MSM8939; those were fixed before testing. The APSS
+watchdog patches (0031-0032) and the SDIO probe diagnostic in
+`kernel/debug/` were written by Codex from the vendor DT and kernel
+sources, then built and tested on the device. Testing:
 `checkpatch.pl --strict`, kernel builds without warnings in the changed
 files, and on the device libcamera `cam`, GStreamer pipelines and the
 sensor sysfs interfaces.
@@ -84,13 +87,15 @@ before encoding.
 ## Layout
 
 ```
-kernel/series/       28 patches, one change each (git format-patch)
+kernel/series/       32 patches, one change each (git format-patch)
 kernel/audio/        q6asm-dai stream lifetime fix (written with Codex)
-kernel/debug/        ramoops, Venus fw_debug, qdsp6 traces; not for upstream
+kernel/debug/        ramoops, Venus fw_debug, qdsp6 traces, SDIO probe stage; not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
 kernel/config.fragment
 libcamera/           S5KC505A tuning files (libcamera 0.8.0 and 0.7.x)
 userspace/pipewire/  echo cancellation config
+userspace/systemd/   systemd runtime watchdog drop-in
+userspace/wifi-guard/ rebinds ath10k_sdio when Wi-Fi did not come up at boot
 LICENSES/            full license texts
 ```
 
@@ -132,8 +137,7 @@ which enables touch; the stock pmOS lk2nd image did not for us.
 - Stop GStreamer pipelines with EOS (`gst-launch-1.0 -e` and SIGINT, or
   `timeout -s INT`). Killing the decoder mid-stream used to hang the SoC; the
   last vdec patch fixes the case we hit, but EOS is still the safe way.
-- The TrustZone watchdog resets the board about 45 s after a hard hang; there
-  is no `/dev/watchdog` in Linux.
+- The TrustZone watchdog resets the board about 45 s after a hard hang.
 - Encoder pipeline we use (camera to RTP):
   ```
   libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! video/x-raw,format=NV12
@@ -192,11 +196,33 @@ rtspsrc location=rtsps://... protocols=tcp
 
 - The Adreno 506 (freedreno) can hang: the kernel log repeats `hangcheck
   detected gpu lockup` every second, the display client sits in D state and
-  `reboot` hangs. There is no hardware watchdog in Linux (`CONFIG_WATCHDOG` off,
-  no watchdog node in the DT); only kernel panics reboot by themselves
-  (`panic=120`). Our workaround is a userspace guard that watches `/dev/kmsg`
+  `reboot` hangs. Our workaround is a userspace guard that watches `/dev/kmsg`
   and does a SysRq sync + reboot after 60 s of lockup, at most 3 times per
-  hour. A proper watchdog in the DT would be better.
+  hour. With patches 0031-0032 (`CONFIG_QCOM_WDT`) and
+  `userspace/systemd/80-apss-watchdog.conf`, systemd also feeds the APSS
+  watchdog (`/dev/watchdog0`, 30 s), so a hang that stops PID 1 resets the
+  board. Measured with idle CPUs, the reset comes later than programmed:
+  about 115 s for a 30 s timeout and 56 s for 10 s. Our guess is that the
+  counter pauses while all cores are in power collapse; not verified.
+- Wi-Fi (QCA9379, `ath10k_sdio`) sometimes cannot talk to the card at boot.
+  The driver logs -110 in one of three places: "timed out while setting
+  default block size" (the SDIO bus probe, located with `kernel/debug/0003`),
+  "unable to reset sdio" or "Could not init hif". On one of our five units it
+  happened in up to half of the boots, on the others rarely or never. The card
+  stays broken across warm reboots, and rebinding the SDIO function does not
+  help. Things that made no difference on that unit: `max-frequency` 100 MHz
+  instead of 177 MHz, keeping the unused `wlan_3v3` regulator (GPIO 77) on,
+  disabling runtime PM of the MMC host, loading `ath10k_sdio` earlier, and an
+  extra power cycle of the slot when the host starts. Unbinding and binding
+  the MMC host (`7864900.mmc`) does fix it, because that switches the card's
+  vmmc supply off: it worked every time we tried, in all three variants.
+  `userspace/wifi-guard/` does that at boot when the card is not bound to the
+  driver 15 s after the driver loaded, or when the driver logged -110 for the
+  card and `wlan0` is not up after 60 s; a missing link alone (access point
+  down) does not trigger it. It only touches `7864900.mmc`, at most twice. In 15 reboots
+  of the affected unit Wi-Fi came up every time, 2 of them after the guard
+  stepped in (about 110 s after boot instead of 40-50 s). The root cause is
+  still unknown.
 - Without the `kernel/audio/` fix, the ADSP stops after some audio stream
   restarts (`q6asm` error 9, no sound until reboot); full-duplex use such as an
   echo canceller makes it happen within a few cycles.
@@ -222,16 +248,18 @@ units are identified separately.
 
 ## License
 
-- Kernel driver changes (`kernel/series/0001`-`0013`, `0016`-`0023`,
-  `kernel/audio/`, the C part of `kernel/debug/`, `kernel/third-party/`):
-  GPL-2.0-only, see
+- Kernel driver changes (`kernel/series/0001`-`0015`, `0018`-`0025`,
+  `kernel/audio/`, the C part of `kernel/debug/` except `0003`,
+  `kernel/third-party/`): GPL-2.0-only, see
   `LICENSES/GPL-2.0-only.txt`.
-- The device tree binding change (`kernel/series/0014`):
-  GPL-2.0-only OR BSD-2-Clause, like the binding it changes. See
+- `kernel/debug/0003` changes `drivers/mmc/core/sdio_bus.c`, which is
+  GPL-2.0-or-later; the change is under the same license.
+- The device tree binding changes (`kernel/series/0016`, `0031`):
+  GPL-2.0-only OR BSD-2-Clause, like the bindings they change. See
   `LICENSES/GPL-2.0-only.txt` and `LICENSES/BSD-2-Clause.txt`.
-- Device tree changes: `msm8953.dtsi` (`kernel/series/0015`, original
+- Device tree changes: `msm8953.dtsi` (`kernel/series/0017`, `0032`, original
   copyright (c) 2022 The Linux Foundation) and `apq8053-lenovo-cd-18781y.dts`
-  (`kernel/series/0024`-`0028` and the DTS part of `kernel/debug/`, original
+  (`kernel/series/0026`-`0030` and the DTS part of `kernel/debug/`, original
   copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
   change. See `LICENSES/BSD-3-Clause.txt`.
 - `README.md`, `INSTALL.md`, `kernel/config.fragment`, the
