@@ -40,7 +40,7 @@ those files.
 
 | Part | Status |
 |---|---|
-| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. Colour matrices calibrated on a SpyderCheckr 24, used at half strength (see below). |
+| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. Colour matrices and AWB light curve calibrated on a SpyderCheckr 24 (see below). |
 | Venus H.264 encoder | `v4l2h264enc`: bitrate control works (1 Mb/s target gives 931-959 kb/s), 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
 | Venus H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC (that fix is so far tested on one unit; the others still run the version before it). |
 | Venus H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core, see below. |
@@ -52,13 +52,14 @@ those files.
 
 Not done: echo cancellation, beamforming with the two DMICs.
 
-**Camera colour.** `libcamera/s5kc505a.yaml` has colour matrices fitted on a
-Datacolor SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and
-6500 K, flat-fielded with the grey back of the chart. Median CIE76 error after
-correction is 3.9-5.8 (`libcamera/s5kc505a-full-ccm.yaml`). In live use the
-soft ISP turns clipped highlights pink with the full matrices and amplifies
-grey-world AWB errors, so the default file blends them 50/50 with the
-identity. The soft ISP AGC in libcamera 0.7.1 has no manual exposure,
+**Camera colour.** Colour matrices and AWB gains were measured on a Datacolor
+SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and 6500 K,
+flat-fielded with the grey back of the chart. Median CIE76 error after
+correction is 3.9-5.8. `libcamera/s5kc505a.yaml` (libcamera 0.8.0) uses the
+full matrices and Bayesian AWB along the measured light curve instead of grey
+world. With libcamera 0.7.x the soft ISP turns clipped highlights pink with the
+full matrices, so `libcamera/s5kc505a-libcamera-0.7.yaml` blends them 50/50
+with the identity and keys them on the soft ISP's estimateCCT() values. The soft ISP AGC in libcamera 0.7.1 has no manual exposure,
 exposure compensation or highlight protection, so bright objects on a dark
 background clip. libcamera 0.8.0 moved it to the common libipa AGC: manual
 `ExposureTime`/`AnalogueGain` and `ExposureValue` work on this camera (EV -1
@@ -75,7 +76,7 @@ kernel/series/       28 patches, one change each (git format-patch)
 kernel/debug/        ramoops + Venus fw_debug parameter, not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
 kernel/config.fragment
-libcamera/           S5KC505A tuning files (half-strength and full colour matrices)
+libcamera/           S5KC505A tuning files (libcamera 0.8.0 and 0.7.x)
 LICENSES/            full license texts
 ```
 
@@ -98,9 +99,10 @@ In pmaports (v26.06):
 2. libcamera: we use 0.8.0 (the `temp/libcamera` package of pmaports master);
    0.7.1 works as well. Add the S5KC505A sensor helper from rebrch/tsv-nura,
    [`camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch`](https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch)
-   (it applies unchanged to 0.7.1 and 0.8.0), and `libcamera/s5kc505a.yaml`
-   to the tuning files (installed under `/usr/share/libcamera/ipa/softisp/` on
-   0.8.0, `ipa/simple/` on 0.7.1). On v26.06, PipeWire from Alpine 3.24 is
+   (it applies unchanged to 0.7.1 and 0.8.0), and the tuning file as
+   `s5kc505a.yaml`: `libcamera/s5kc505a.yaml` under
+   `/usr/share/libcamera/ipa/softisp/` on 0.8.0, or
+   `libcamera/s5kc505a-libcamera-0.7.yaml` under `ipa/simple/` on 0.7.x. On v26.06, PipeWire from Alpine 3.24 is
    built against libcamera 0.7 and blocks the upgrade; we rebuilt PipeWire
    1.6.11 from Alpine edge (it carries a libcamera 0.8 compatibility patch),
    without the onnx filter-graph subpackage, which needs onnxruntime;
