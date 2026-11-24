@@ -1,6 +1,6 @@
-From 42ec63bbda1ed2fa5d514c8af42523dff357900c Mon Sep 17 00:00:00 2001
+From 00210e0fc9fe51653a045526cde162fb6012ac7e Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 04/28] media: venus: venc: fall back to 1-120 fps without
  frame rate caps
 
@@ -12,11 +12,11 @@ Report 1-120 fps when the firmware gives no range.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/platform/qcom/venus/venc.c | 19 ++++++++++++++++---
- 1 file changed, 16 insertions(+), 3 deletions(-)
+ drivers/media/platform/qcom/venus/venc.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index efcec72..6871cc8 100644
+index efcec72..998ae0f 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
 @@ -473,6 +473,7 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
@@ -27,15 +27,11 @@ index efcec72..6871cc8 100644
  
  	fival->type = V4L2_FRMIVAL_TYPE_STEPWISE;
  
-@@ -502,12 +503,24 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
+@@ -502,12 +503,20 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
  		framerate_factor = (1 << 16);
  	}
  
-+	/*
-+	 * MSM8953 firmware VIDEO.VE.4.2 reports no HFI_CAPABILITY_FRAMERATE for
-+	 * the encoder; without a fallback the denominator is 0 and GStreamer
-+	 * stalls.
-+	 */
++	/* some firmware reports no frame rate range for the encoder */
 +	fmin = frate_min(inst) / framerate_factor;
 +	fmax = frate_max(inst) / framerate_factor;
 +	if (!fmin || !fmax) {

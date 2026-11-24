@@ -1,6 +1,6 @@
-From fdaeacaed0ffd593b8b633903f6c10970de6f60f Mon Sep 17 00:00:00 2001
+From 93c87b0e48b4f79f57e0d6d66a98e02441f03e0d Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 25/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
  accelerometer mount matrix
 
@@ -9,21 +9,17 @@ iio-sensor-proxy: the device standing in landscape reports left-up.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-index 0487c33..6413903 100644
+index e0ba918..58bc8ca 100644
 --- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 +++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-@@ -91,6 +91,14 @@
+@@ -91,6 +91,10 @@
  			vdd-supply = <&pm8953_l10>;
  			vddio-supply = <&pm8953_l6>;
  
-+			/*
-+			 * Axes relative to the panel (native portrait); verified with
-+			 * iio-sensor-proxy: device standing in landscape = left-up.
-+			 */
 +			mount-matrix = "0", "-1", "0",
 +				       "1", "0", "0",
 +				       "0", "0", "1";

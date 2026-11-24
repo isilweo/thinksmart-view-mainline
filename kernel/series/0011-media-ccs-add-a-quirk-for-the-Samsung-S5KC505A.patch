@@ -1,6 +1,6 @@
-From 9fd7bed3b6e8fcdb80406a2f2bb01c177b369a35 Mon Sep 17 00:00:00 2001
+From c63eed8be2be1fe5d357911faeca4e084a800d38 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 11/28] media: ccs: add a quirk for the Samsung S5KC505A
 
 The S5KC505A (front camera of the Lenovo ThinkSmart View) identifies as
@@ -31,12 +31,12 @@ at 27-30 fps.
 Assisted-by: Claude:claude-opus-5-5
 ---
  drivers/media/i2c/ccs/ccs-core.c  |   1 +
- drivers/media/i2c/ccs/ccs-quirk.c | 146 ++++++++++++++++++++++++++++++
+ drivers/media/i2c/ccs/ccs-quirk.c | 133 ++++++++++++++++++++++++++++++
  drivers/media/i2c/ccs/ccs-quirk.h |   1 +
- 3 files changed, 148 insertions(+)
+ 3 files changed, 135 insertions(+)
 
 diff --git a/drivers/media/i2c/ccs/ccs-core.c b/drivers/media/i2c/ccs/ccs-core.c
-index b208117..bab425c 100644
+index e25d008..5d4e30a 100644
 --- a/drivers/media/i2c/ccs/ccs-core.c
 +++ b/drivers/media/i2c/ccs/ccs-core.c
 @@ -48,6 +48,7 @@ static struct ccs_limit_offset {
@@ -48,19 +48,17 @@ index b208117..bab425c 100644
  	CCS_IDENT_L(0x01, 0x022e, -1, "vw6558"),
  	CCS_IDENT_L(0x07, 0x7698, -1, "ovm7698"),
 diff --git a/drivers/media/i2c/ccs/ccs-quirk.c b/drivers/media/i2c/ccs/ccs-quirk.c
-index e48a4fa..769b0d8 100644
+index e48a4fa..7705e3c 100644
 --- a/drivers/media/i2c/ccs/ccs-quirk.c
 +++ b/drivers/media/i2c/ccs/ccs-quirk.c
-@@ -215,3 +215,149 @@ static int tcm8500md_limits(struct ccs_sensor *sensor)
+@@ -215,3 +215,136 @@ static int tcm8500md_limits(struct ccs_sensor *sensor)
  const struct ccs_quirk smiapp_tcm8500md_quirk = {
  	.limits = tcm8500md_limits,
  };
 +
 +/*
-+ * Samsung S5KC505A (Lenovo ThinkSmart View CD-18781Y).
-+ * The clock limit registers are incomplete. The sensor has two PLLs (VT and
-+ * OP, CCS registers 0x0305/0x0306 and 0x030d/0x030e) and a 2-lane 960 Mb/s
-+ * link. Register tables come from the stock Lenovo libmmcamera_s5kc505a.so.
++ * Samsung S5KC505A: incomplete clock limit registers, dual PLL, and a vendor
++ * init sequence taken from the Lenovo libmmcamera_s5kc505a.so.
 + */
 +static int s5kc505a_limits(struct ccs_sensor *sensor)
 +{
@@ -68,18 +66,10 @@ index e48a4fa..769b0d8 100644
 +			  CCS_CLOCK_TREE_PLL_CAPABILITY_DUAL_PLL);
 +	ccs_replace_limit(sensor, CCS_L_CLOCK_CALCULATION, 0,
 +			  CCS_CLOCK_CALCULATION_LANE_SPEED);
-+	/* stock mode: line length 3112 = 2608 + 504; with 192 the VFE drops lines */
++	/* vendor mode timing; shorter blanking makes the VFE drop lines */
 +	ccs_replace_limit(sensor, CCS_L_MIN_LINE_BLANKING_PCK, 0, 504);
-+	/*
-+	 * stock mode: 2030 lines for 1960 visible. With 25 blanking lines the VFE
-+	 * misses the start of frame and the image rolls by ~176 rows per frame.
-+	 */
 +	ccs_replace_limit(sensor, CCS_L_MIN_FRAME_BLANKING_LINES, 0, 70);
-+	/*
-+	 * VT PLL: stock 24/4*95 = 570 MHz, vt_pix_div 6. At 384 MHz (24/3*48,
-+	 * div 4) the ADC ramp does not complete and white clips at ~286 (8 bits
-+	 * + 32), so force 550-600 MHz. The *_MHZ limits are IEEE 754 floats.
-+	 */
++	/* lower VT PLL rates clip white; the *_MHZ limits are IEEE 754 floats */
 +	ccs_replace_limit(sensor, CCS_L_MIN_PLL_OP_CLK_FREQ_MHZ, 0, 0x44098000); /* 550 */
 +	ccs_replace_limit(sensor, CCS_L_MAX_PLL_OP_CLK_FREQ_MHZ, 0, 0x44160000); /* 600 */
 +	ccs_replace_limit(sensor, CCS_L_MIN_VT_SYS_CLK_DIV, 0, 1);
@@ -98,10 +88,7 @@ index e48a4fa..769b0d8 100644
 +	return 0;
 +}
 +
-+/*
-+ * ccs_write_addr_8s() above passes bare addresses, but cci_write() needs the
-+ * register width, so write the S5KC505A tables through CCI_REG8().
-+ */
++/* cci_write() needs the register width, unlike ccs_write_addr_8s() */
 +static int s5kc505a_write(struct ccs_sensor *sensor,
 +			  const struct ccs_reg_8 *regs, int len)
 +{
@@ -184,7 +171,7 @@ index e48a4fa..769b0d8 100644
 +	};
 +	int rval;
 +
-+	/* the stock table waits 10 ms after the first write */
++	/* the vendor sequence waits 10 ms after the first write */
 +	rval = s5kc505a_write(sensor, init, 1);
 +	if (rval)
 +		return rval;

@@ -1,6 +1,6 @@
-From 86cee679bdc8fcd141c14dd1e6ec2f659b7673a6 Mon Sep 17 00:00:00 2001
+From 0d22d7a89c7c0251ca32db3d544bcbb599441069 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 14/28] dt-bindings: media: qcom,msm8953-camss: add the VFE
  VBIF regions
 

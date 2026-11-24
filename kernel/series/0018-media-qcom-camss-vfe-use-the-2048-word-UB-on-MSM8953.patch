@@ -1,6 +1,6 @@
-From 1d94340ca70a7264bd85ccdf30b1fcbc68434709 Mon Sep 17 00:00:00 2001
+From 718217fc38f6cba3b08e4d4a1581bd466713b8d2 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 18/28] media: qcom: camss: vfe: use the 2048 word UB on
  MSM8953
 
@@ -14,26 +14,22 @@ Not tested on its own; see the QoS and DS change.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- .../media/platform/qcom/camss/camss-vfe-4-1.c  | 18 ++++++++++++++----
- .../media/platform/qcom/camss/camss-vfe-4-7.c  |  6 +++---
- .../media/platform/qcom/camss/camss-vfe-4-8.c  |  2 +-
- .../media/platform/qcom/camss/camss-vfe-gen1.c |  2 +-
- .../media/platform/qcom/camss/camss-vfe-gen1.h |  2 +-
- 5 files changed, 20 insertions(+), 10 deletions(-)
+ drivers/media/platform/qcom/camss/camss-vfe-4-1.c  | 14 ++++++++++----
+ drivers/media/platform/qcom/camss/camss-vfe-4-7.c  |  6 +++---
+ drivers/media/platform/qcom/camss/camss-vfe-4-8.c  |  2 +-
+ drivers/media/platform/qcom/camss/camss-vfe-gen1.c |  2 +-
+ drivers/media/platform/qcom/camss/camss-vfe-gen1.h |  2 +-
+ 5 files changed, 16 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-index 6afa8e5..87767a0 100644
+index 6afa8e5..87ba5cd 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-@@ -218,13 +218,23 @@
+@@ -218,13 +218,19 @@
  
  #define MSM_VFE_VFE0_UB_SIZE 1023
  #define MSM_VFE_VFE0_UB_SIZE_RDI (MSM_VFE_VFE0_UB_SIZE / 3)
-+/*
-+ * MSM8953: use 2048 UB words for VFE0 (VFE40_UB_SIZE_8952 in the vendor
-+ * driver), split into three equal parts; the returned value is the depth
-+ * register encoding (words - 1).
-+ */
++/* MSM8953 VFE0: 2048 UB words split in three, depth encoded as words - 1 */
 +#define MSM_VFE_VFE0_UB_WORDS_8X53 2048
 +#define MSM_VFE_VFE0_UB_SIZE_RDI_8X53 (MSM_VFE_VFE0_UB_WORDS_8X53 / 3 - 1)
  

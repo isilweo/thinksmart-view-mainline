@@ -1,6 +1,6 @@
-From ea9642ed23cef0db3baeb29d46075d1f4bcc11b4 Mon Sep 17 00:00:00 2001
+From 4d30f05aa98c3c4ae5426d05959dede161d99066 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 12/28] media: qcom: camss: do not walk into multi-subdev
  sensors
 
@@ -14,35 +14,29 @@ which is the sensor, on start and stop.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/platform/qcom/camss/camss-video.c | 13 +++++++++++++
- 1 file changed, 13 insertions(+)
+ drivers/media/platform/qcom/camss/camss-video.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/drivers/media/platform/qcom/camss/camss-video.c b/drivers/media/platform/qcom/camss/camss-video.c
-index 831486e..e62571a 100644
+index 831486e..507ab09 100644
 --- a/drivers/media/platform/qcom/camss/camss-video.c
 +++ b/drivers/media/platform/qcom/camss/camss-video.c
-@@ -275,6 +275,15 @@ static int video_start_streaming(struct vb2_queue *q, unsigned int count)
+@@ -275,6 +275,10 @@ static int video_start_streaming(struct vb2_queue *q, unsigned int count)
  		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
  		if (ret < 0 && ret != -ENOIOCTLCMD)
  			goto error;
 +
-+		/*
-+		 * The first subdev outside camss (camss subdevs have no ->dev) is
-+		 * the sensor. A sensor made of several subdevs (ccs: binner,
-+		 * pixel_array) starts its internal pipeline itself through
-+		 * enable_streams, so do not walk into it.
-+		 */
++		/* stop at the sensor, it starts its own internal subdevs */
 +		if (subdev->dev && subdev->dev != video->camss->dev)
 +			break;
  	}
  
  	return 0;
-@@ -316,6 +325,10 @@ static void video_stop_streaming(struct vb2_queue *q)
+@@ -316,6 +320,9 @@ static void video_stop_streaming(struct vb2_queue *q)
  			dev_err(video->camss->dev, "Video pipeline stop failed: %d\n", ret);
  			return;
  		}
 +
-+		/* the sensor, see video_start_streaming() */
 +		if (subdev->dev && subdev->dev != video->camss->dev)
 +			break;
  	}

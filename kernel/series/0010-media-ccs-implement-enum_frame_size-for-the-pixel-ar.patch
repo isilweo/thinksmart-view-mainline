@@ -1,6 +1,6 @@
-From 31974390111f5cf328e2dd3c52be8ad7b8dcfaf5 Mon Sep 17 00:00:00 2001
+From 50de665ceab921dd71ece514d49f6c4d356a318b Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 10/28] media: ccs: implement enum_frame_size for the pixel
  array
 
@@ -13,22 +13,20 @@ sizes depend on crop/compose and keep returning -EINVAL.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/i2c/ccs/ccs-core.c | 27 +++++++++++++++++++++++++++
- 1 file changed, 27 insertions(+)
+ drivers/media/i2c/ccs/ccs-core.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
 
 diff --git a/drivers/media/i2c/ccs/ccs-core.c b/drivers/media/i2c/ccs/ccs-core.c
-index 8e25f97..b208117 100644
+index 8e25f97..e25d008 100644
 --- a/drivers/media/i2c/ccs/ccs-core.c
 +++ b/drivers/media/i2c/ccs/ccs-core.c
-@@ -2586,6 +2586,32 @@ static void ccs_get_native_size(struct ccs_subdev *ssd, struct v4l2_rect *r)
+@@ -2586,6 +2586,30 @@ static void ccs_get_native_size(struct ccs_subdev *ssd, struct v4l2_rect *r)
  	r->height = CCS_LIM(ssd->sensor, Y_ADDR_MAX) + 1;
  }
  
 +/*
-+ * libcamera (CameraSensorLegacy) takes the sensor sizes from ENUM_FRAME_SIZE on
-+ * the pixel array, which ccs did not implement ("No image format found"). The
-+ * pixel array has one fixed size; the binner and scaler sizes depend on
-+ * crop/compose, so they keep returning -EINVAL.
++ * Only the pixel array has a fixed size; the binner and scaler sizes depend
++ * on crop and compose.
 + */
 +static int ccs_enum_frame_size(struct v4l2_subdev *subdev,
 +			       struct v4l2_subdev_state *sd_state,
@@ -53,7 +51,7 @@ index 8e25f97..b208117 100644
  static int ccs_get_selection(struct v4l2_subdev *subdev,
  			     struct v4l2_subdev_state *sd_state,
  			     struct v4l2_subdev_selection *sel)
-@@ -3108,6 +3134,7 @@ static const struct v4l2_subdev_video_ops ccs_video_ops = {
+@@ -3108,6 +3132,7 @@ static const struct v4l2_subdev_video_ops ccs_video_ops = {
  
  static const struct v4l2_subdev_pad_ops ccs_pad_ops = {
  	.enum_mbus_code = ccs_enum_mbus_code,

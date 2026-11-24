@@ -1,6 +1,6 @@
-From 750a05fd4f871c56d6f7cf6faf0495a2537f3d53 Mon Sep 17 00:00:00 2001
+From 8dbd46f02909b3caf75f9667f2765399ab4942f4 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 07/28] media: venus: venc: allocate twice the minimum capture
  buffers
 
@@ -13,24 +13,19 @@ Allocate twice the minimum up front.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/platform/qcom/venus/venc.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ drivers/media/platform/qcom/venus/venc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index 5aa32ab..b82b443 100644
+index d1358da..3144322 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
-@@ -1193,7 +1193,13 @@ static int venc_queue_setup(struct vb2_queue *q,
+@@ -1181,7 +1181,8 @@ static int venc_queue_setup(struct vb2_queue *q,
  		break;
  	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
  		*num_planes = inst->fmt_cap->num_planes;
 -		*num_buffers = max(*num_buffers, min);
-+		/*
-+		 * Buffers added after start (CREATE_BUFS) are rejected by
-+		 * buf_prepare (-EBUSY; the firmware only knows the REQBUFS
-+		 * count), and GStreamer adds a fifth one right away when given
-+		 * only the minimum. Allocate headroom up front.
-+		 */
++		/* buffers added after REQBUFS are rejected; allocate headroom */
 +		*num_buffers = max(*num_buffers, 2 * min);
  		inst->num_output_bufs = *num_buffers;
  		sizes[0] = venus_helper_get_framesz(inst->fmt_cap->pixfmt,

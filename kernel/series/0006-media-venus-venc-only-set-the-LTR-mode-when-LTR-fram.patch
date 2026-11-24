@@ -1,6 +1,6 @@
-From 31490c26032cd0935fc6fbe0f7e2c55b23ca667e Mon Sep 17 00:00:00 2001
+From d772d463291bab39bc02e0ccd1ebfa4e66719afe Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 06/28] media: venus: venc: only set the LTR mode when LTR
  frames are requested
 
@@ -11,14 +11,14 @@ the same.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/platform/qcom/venus/venc.c | 21 ++++++++++++++-------
- 1 file changed, 14 insertions(+), 7 deletions(-)
+ drivers/media/platform/qcom/venus/venc.c | 17 ++++++++++-------
+ 1 file changed, 10 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index bf2a401..5aa32ab 100644
+index f8eb86d..d1358da 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
-@@ -973,13 +973,20 @@ static int venc_set_properties(struct venus_inst *inst)
+@@ -965,13 +965,16 @@ static int venc_set_properties(struct venus_inst *inst)
  	if (ret)
  		return ret;
  
@@ -29,11 +29,7 @@ index bf2a401..5aa32ab 100644
 -	ret = hfi_session_set_property(inst, ptype, &ltr_mode);
 -	if (ret)
 -		return ret;
-+	/*
-+	 * Only set LTR mode when requested (ltr_count > 0), as Qualcomm OMX
-+	 * does. MANUAL with ltr_count = 0 on Venus 3.x (MSM8953) hung the
-+	 * encoder core mid-stream once rate control was active.
-+	 */
++	/* manual LTR mode without LTR frames hangs Venus 3.x */
 +	if (ctr->ltr_count) {
 +		ptype = HFI_PROPERTY_PARAM_VENC_LTRMODE;
 +		ltr_mode.ltr_count = ctr->ltr_count;

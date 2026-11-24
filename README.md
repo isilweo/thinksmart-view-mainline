@@ -16,6 +16,19 @@ submitter must be able to certify their contribution under the
 [Developer's Certificate of Origin](https://developercertificate.org/) and add
 their own `Signed-off-by:` where applicable.
 
+**How this was made.** The patches were developed in interactive sessions
+with Claude Code (Anthropic, model claude-opus-5-5) working on the
+tablets over SSH: it read the vendor device tree and logs, wrote the code,
+comments and changelogs, and built and tested each kernel on the device
+while I directed the work, checked the results and decided what to keep.
+The CAMSS rework (patches 0013-0020) was reviewed with Codex (OpenAI,
+gpt-6.2-astra), which found an off-by-one in the UB split, a missing
+height limit, a burst length difference on MSM8916/MSM8939 and a probe
+behaviour change on MSM8939; those were fixed before testing. Testing:
+`checkpatch.pl --strict`, kernel builds without warnings in the changed
+files, and on the device libcamera `cam`, GStreamer pipelines and the
+sensor sysfs interfaces.
+
 **No firmware is included.** The installation uses firmware already present
 on your device (Venus, ADSP and Wi-Fi firmware from its own `modem` partition,
 linked by `msm-firmware-loader` in postmarketOS) and an amplifier DSP file

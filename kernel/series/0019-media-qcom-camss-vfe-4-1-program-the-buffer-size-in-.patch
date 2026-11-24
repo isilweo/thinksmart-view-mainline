@@ -1,6 +1,6 @@
-From 5cd8ee19f29c41151f675f6eed65383fef26285d Mon Sep 17 00:00:00 2001
+From 1651a96bd8ccb9d771c1ea842823de374bfbe83a Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 19/28] media: qcom: camss: vfe-4-1: program the buffer size in
  frame based mode
 
@@ -16,26 +16,20 @@ on MSM8916 and MSM8939, which are left unchanged. The height field is
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- .../media/platform/qcom/camss/camss-vfe-4-1.c | 30 +++++++++++++++++++
- .../platform/qcom/camss/camss-vfe-gen1.c      |  3 ++
+ .../media/platform/qcom/camss/camss-vfe-4-1.c | 24 +++++++++++++++++++
+ .../platform/qcom/camss/camss-vfe-gen1.c      |  3 +++
  .../platform/qcom/camss/camss-vfe-gen1.h      |  2 ++
- 3 files changed, 35 insertions(+)
+ 3 files changed, 29 insertions(+)
 
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-index 87767a0..2a9948a 100644
+index 87ba5cd..b8bddf7 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-@@ -297,6 +297,35 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
+@@ -293,6 +293,29 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
  			1 << VFE_0_BUS_IMAGE_MASTER_n_WR_CFG_FRM_BASED_SHIFT);
  }
  
-+/*
-+ * MSM8953: frame based mode still needs the buffer geometry, as the vendor
-+ * msm_vfe40_axi_cfg_wm_reg() programs it: 64-bit words per line, height - 1
-+ * and burst length 3 (the vendor uses 2 on MSM8916/MSM8939, which are left
-+ * unchanged here). Without it MSM8953 tears or cuts RDI frames. The height
-+ * field is 12 bits wide.
-+ */
++/* MSM8953 needs the buffer geometry in frame based mode as well */
 +#define VFE_0_WR_BUFFER_CFG_MAX_HEIGHT	4096
 +
 +static void vfe_wm_frame_size(struct vfe_device *vfe, u8 wm,
@@ -61,7 +55,7 @@ index 87767a0..2a9948a 100644
  static void vfe_get_wm_sizes(struct v4l2_pix_format_mplane *pix, u8 plane,
  			     u16 *width, u16 *height, u16 *bytesperline)
  {
-@@ -1016,6 +1045,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
+@@ -1012,6 +1035,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
  	.set_xbar_cfg = vfe_set_xbar_cfg,
  	.wm_enable = vfe_wm_enable,
  	.wm_frame_based = vfe_wm_frame_based,

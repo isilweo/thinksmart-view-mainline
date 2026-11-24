@@ -1,6 +1,6 @@
-From 9a85a5265c9d8d4bed25ede32006f865b93eaed1 Mon Sep 17 00:00:00 2001
+From b55be8cef2715f2c81057d9c5ad36fdcff58f9c3 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 13/28] media: qcom: camss: give MSM8953 its own CSIPHY
  resources
 

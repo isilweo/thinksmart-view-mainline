@@ -1,6 +1,6 @@
-From 85eb3b0b3e248f618d56b9b0786ab8b90d28f3b5 Mon Sep 17 00:00:00 2001
+From 85383322ed8dd3f54ca40bb6fa13f94664156443 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 05/28] media: venus: venc: base rate control on the frame rate
  on Venus 3.x
 
@@ -15,22 +15,18 @@ gives 1786-1836 kb/s.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/media/platform/qcom/venus/venc.c | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
+ drivers/media/platform/qcom/venus/venc.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
 
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index 6871cc8..bf2a401 100644
+index 998ae0f..f8eb86d 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
-@@ -704,6 +704,20 @@ static int venc_set_properties(struct venus_inst *inst)
+@@ -700,6 +700,16 @@ static int venc_set_properties(struct venus_inst *inst)
  	if (ret)
  		return ret;
  
-+	/*
-+	 * Base rate control on FRAME_RATE, not on buffer timestamps.
-+	 * GStreamer (v4l2h264enc) puts whole seconds (0, 1, 2 s) in the
-+	 * timestamps, so the firmware saw 1 fps and produced ~20x the bitrate.
-+	 */
++	/* base rate control on the frame rate, not on buffer timestamps */
 +	if (IS_V3(inst->core)) {
 +		en.enable = 1;
 +		ret = hfi_session_set_property(inst,

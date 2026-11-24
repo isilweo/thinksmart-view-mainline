@@ -1,6 +1,6 @@
-From 9bf4f438564fd0300b254dfc9d5ef9f4972dd147 Mon Sep 17 00:00:00 2001
+From 1312abb8b027d361c9a919bfffcc9d26081b624e Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 27/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable the
  proximity sensor
 
@@ -12,22 +12,21 @@ it shares with the bma253, and set proximity-near-level.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- .../dts/qcom/apq8053-lenovo-cd-18781y.dts     | 19 +++++++++++++------
- 1 file changed, 13 insertions(+), 6 deletions(-)
+ .../boot/dts/qcom/apq8053-lenovo-cd-18781y.dts | 18 ++++++++++++------
+ 1 file changed, 12 insertions(+), 6 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-index c03d074..0b4790e 100644
+index dc2fef4..e728638 100644
 --- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 +++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-@@ -108,19 +108,26 @@
+@@ -104,19 +104,25 @@
  			reg = <0x51>;
  
  			interrupt-parent = <&tlmm>;
 -			interrupts = <43 IRQ_TYPE_EDGE_RISING>;
-+			interrupts = <43 IRQ_TYPE_EDGE_FALLING>; /* INT is active low */
++			interrupts = <43 IRQ_TYPE_EDGE_FALLING>;
  			interrupt-names = "INT1";
  
-+			/* Same supplies as the bma253; without them probe races the LDOs */
 +			vdd-supply = <&pm8953_l10>;
 +			vddio-supply = <&pm8953_l6>;
 +

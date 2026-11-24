@@ -1,6 +1,6 @@
-From abac7e2f64f75405be8c57792808ff21a24afe47 Mon Sep 17 00:00:00 2001
+From d56f585fe09215caf0905ee5fb4f9c68a5f6936a Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 23/28] iio: light: vcnl4000: autosuspend right after probe
 
 The sensor stays powered after probe until the first read. Mark the
@@ -9,18 +9,17 @@ down after VCNL4000_SLEEP_DELAY_MS like after any other access.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/iio/light/vcnl4000.c | 3 +++
- 1 file changed, 3 insertions(+)
+ drivers/iio/light/vcnl4000.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
 diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
-index 36fd635..0c319ee 100644
+index c756126..fed7bbd 100644
 --- a/drivers/iio/light/vcnl4000.c
 +++ b/drivers/iio/light/vcnl4000.c
-@@ -2068,6 +2068,9 @@ static int vcnl4000_probe(struct i2c_client *client)
+@@ -2056,6 +2056,8 @@ static int vcnl4000_probe(struct i2c_client *client)
  	pm_runtime_enable(&client->dev);
  	pm_runtime_set_autosuspend_delay(&client->dev, VCNL4000_SLEEP_DELAY_MS);
  	pm_runtime_use_autosuspend(&client->dev);
-+	/* Power the sensor down after SLEEP_DELAY, not only after the first read */
 +	pm_runtime_mark_last_busy(&client->dev);
 +	pm_request_autosuspend(&client->dev);
  

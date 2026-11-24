@@ -1,6 +1,6 @@
-From 05613beb60b1832546c13173f5e0277ee77efcbf Mon Sep 17 00:00:00 2001
+From 6a21a4609a26dd1aa22fe618d8bff4b1ff2bdcd4 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 22/28] iio: light: vcnl4000: use low-power IR LED settings on
  the VCNL4200
 
@@ -17,24 +17,18 @@ sampling period accordingly. Proximity still detects a hand at
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- drivers/iio/light/vcnl4000.c | 32 +++++++++++++++++++++++++++++---
- 1 file changed, 29 insertions(+), 3 deletions(-)
+ drivers/iio/light/vcnl4000.c | 26 +++++++++++++++++++++++---
+ 1 file changed, 23 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
-index 7658a4d..36fd635 100644
+index cc09bd4..c756126 100644
 --- a/drivers/iio/light/vcnl4000.c
 +++ b/drivers/iio/light/vcnl4000.c
-@@ -123,6 +123,19 @@
+@@ -123,6 +123,13 @@
  	(FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4040_CONF3_PS_MPS_16BITS) | \
  	 FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4040_CONF3_PS_LED_I_16BITS))
  
-+/*
-+ * VCNL4200: low-power IR LED settings. 8 pulses of 120 mA at duty 1/160 make
-+ * the LED run hot, and PS is powered together with ALS (set_power_state), so
-+ * the LED is driven even when only illuminance is read. Use the values of the
-+ * stock Lenovo firmware (sns_dd_vcnl4200 on the ADSP): 2 pulses of 75 mA,
-+ * PS_IT 8T, duty 1/1280.
-+ */
++/* VCNL4200 low-power IR LED settings, as used by the vendor ADSP driver */
 +#define VCNL4200_PS_CONF1_PS_DUTY	GENMASK(7, 6)
 +#define VCNL4200_PS_DUTY_1_1280		3
 +#define VCNL4200_PS_IT_8T		4
@@ -44,7 +38,7 @@ index 7658a4d..36fd635 100644
  static const char * const vcnl4000_supplies[] = { "vdd", "vddio" };
  
  static const int vcnl4010_prox_sampling_frequency[][2] = {
-@@ -388,8 +401,8 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+@@ -388,8 +395,8 @@ static int vcnl4200_init(struct vcnl4000_data *data)
  	case VCNL4200_PROD_ID:
  		/* Default wait time is 50ms, add 20% tolerance. */
  		data->vcnl4200_al.sampling_rate = ktime_set(0, 60000 * 1000);
@@ -55,7 +49,7 @@ index 7658a4d..36fd635 100644
  		break;
  	case VCNL4040_PROD_ID:
  		/* Default wait time is 80ms, add 20% tolerance. */
-@@ -409,6 +422,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+@@ -409,6 +416,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
  		return ret;
  
  	regval = ret | VCNL4040_PS_CONF2_PS_HD;
@@ -69,7 +63,7 @@ index 7658a4d..36fd635 100644
  	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF1,
  					regval);
  	if (ret < 0)
-@@ -419,7 +439,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+@@ -419,7 +433,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
  	if (ret < 0)
  		return ret;
  

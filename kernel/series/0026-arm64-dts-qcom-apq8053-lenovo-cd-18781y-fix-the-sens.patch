@@ -1,6 +1,6 @@
-From 2c93c87044673540a691ec1856935d21c263db4d Mon Sep 17 00:00:00 2001
+From 640b42815df184bd30cd4ee36e1f70e414f2038a Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 26/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: fix the
  sensor I2C pins
 
@@ -12,10 +12,10 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-index 6413903..c03d074 100644
+index 58bc8ca..dc2fef4 100644
 --- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 +++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-@@ -618,7 +618,7 @@
+@@ -614,7 +614,7 @@
  	};
  
  	sensor_i2c_default: sensor-i2c-default-state {

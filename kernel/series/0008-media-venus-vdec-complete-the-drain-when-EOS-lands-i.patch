@@ -1,6 +1,6 @@
-From 3f89e2c7739eb32790f144378dc48e2ab9e4dbfe Mon Sep 17 00:00:00 2001
+From 68e4d13fda8c0347b1fe1cc2432504a6473187e9 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:25 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 08/28] media: venus: vdec: complete the drain when EOS lands
  in a held buffer
 
@@ -15,8 +15,8 @@ LAST.
 Assisted-by: Claude:claude-opus-5-5
 ---
  drivers/media/platform/qcom/venus/core.h |  2 ++
- drivers/media/platform/qcom/venus/vdec.c | 22 ++++++++++++++++++++--
- 2 files changed, 22 insertions(+), 2 deletions(-)
+ drivers/media/platform/qcom/venus/vdec.c | 18 ++++++++++++++++--
+ 2 files changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/media/platform/qcom/venus/core.h b/drivers/media/platform/qcom/venus/core.h
 index 7506f5d..73e32c4 100644
@@ -39,7 +39,7 @@ index 7506f5d..73e32c4 100644
  	enum venus_inst_modes flags;
  	struct ida dpb_ids;
 diff --git a/drivers/media/platform/qcom/venus/vdec.c b/drivers/media/platform/qcom/venus/vdec.c
-index 7a3247d..4cb6920 100644
+index 7a3247d..530292c 100644
 --- a/drivers/media/platform/qcom/venus/vdec.c
 +++ b/drivers/media/platform/qcom/venus/vdec.c
 @@ -1076,6 +1076,7 @@ reconfigure:
@@ -79,15 +79,11 @@ index 7a3247d..4cb6920 100644
  		mutex_unlock(&inst->lock);
  		return;
  	}
-@@ -1429,6 +1434,19 @@ static void vdec_buf_done(struct venus_inst *inst, unsigned int buf_type,
+@@ -1429,6 +1434,15 @@ static void vdec_buf_done(struct venus_inst *inst, unsigned int buf_type,
  	vbuf = venus_helper_find_buf(inst, type, tag);
  	if (!vbuf) {
  		venus_helper_change_dpb_owner(inst, vbuf, type, buf_type, tag);
-+		/*
-+		 * EOS arrived in a buffer userspace still holds (READONLY
-+		 * frames, slow consumer): flag the next queued CAPTURE buffer
-+		 * as LAST, otherwise the drain never completes.
-+		 */
++		/* EOS in a buffer still held by userspace: flag the next one */
 +		if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
 +		    (flags & V4L2_BUF_FLAG_LAST) && inst->streamon_cap &&
 +		    inst->sequence_cap &&

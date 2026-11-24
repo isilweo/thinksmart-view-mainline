@@ -1,6 +1,6 @@
-From 6edf92a9872ac2e167c57d5ecf213f02b56a374b Mon Sep 17 00:00:00 2001
+From c3dcf37d295223ab2faaa3293805a724bc3e8a59 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
-Date: Tue, 24 Nov 2026 14:54:26 +0100
+Date: Tue, 24 Nov 2026 14:56:46 +0100
 Subject: [PATCH 24/28] arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable both
  touchscreens
 
@@ -14,7 +14,7 @@ Assisted-by: Claude:claude-opus-5-5
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-index cecb92f..0487c33 100644
+index cecb92f..e0ba918 100644
 --- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 +++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 @@ -287,7 +287,7 @@
@@ -22,7 +22,7 @@ index cecb92f..0487c33 100644
  		touchscreen-size-y = <1280>;
  
 -		status = "disabled";
-+		status = "okay"; /* both variants exist; the absent one fails to probe */
++		status = "okay"; /* only one of the two controllers is fitted */
  	};
  
  	hx83100a_ts: touchscreen@48 {
@@ -31,7 +31,7 @@ index cecb92f..0487c33 100644
  		touchscreen-size-y = <1280>;
  
 -		status = "disabled";
-+		status = "okay"; /* both variants exist; the absent one fails to probe */
++		status = "okay"; /* only one of the two controllers is fitted */
  	};
  };
  
