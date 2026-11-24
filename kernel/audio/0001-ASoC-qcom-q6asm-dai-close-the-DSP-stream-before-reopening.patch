@@ -1,0 +1,222 @@
+From: Lech Piekarski <isilweo@gmail.com>
+Subject: [PATCH] ASoC: qcom: q6asm-dai: close the DSP stream before reopening it
+
+On MSM8953 (Lenovo ThinkSmart View) full-duplex audio through PipeWire
+(e.g. its WebRTC echo canceller) broke after a few stream restarts: the
+ADSP answered ASM_STREAM_CMD_OPEN_READ_V3 with error 9 (ADSP_EALREADY),
+the capture PCM failed with -EINVAL and audio stayed dead until reboot.
+
+q6asm_dai_prepare() only closes the previous stream when the driver
+state is RUNNING. After a STOP (state STOPPED) a second prepare on the
+same PCM, as done by XRUN recovery or drop/prepare, skips CLOSE, UNMAP
+and the routing close and opens the same ASM port again. When that open
+fails, the error path frees the host audio client, so the stream can no
+longer be closed in the DSP.
+
+Track MAP, OPEN and routing separately, tear down whatever is set up in
+one helper used by prepare, the error path and close, keep the audio
+client until the PCM is closed, and queue capture buffers only after the
+stream has been configured.
+
+Tested on MSM8953: 20/20 full-duplex record+playback cycles with the
+PipeWire echo canceller, no ADSP errors (previously failed after 3-4
+cycles). Tested on one unit only.
+
+Assisted-by: Codex:gpt-6.2-astra
+Assisted-by: Claude:claude-opus-5-5
+---
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -71,6 +71,9 @@
+ 	uint32_t stream_id;
+ 	uint16_t session_id;
+ 	enum stream_state state;
++	bool pcm_mapped;
++	bool pcm_open;
++	bool pcm_routed;
+ 	uint32_t initial_samples_drop;
+ 	uint32_t trailing_samples_drop;
+ 	bool notify_on_drain;
+@@ -203,6 +206,33 @@
+ 	}
+ }
+ 
++/* STOP/EOS stops data transfer but leaves the ASM stream open. */
++static int q6asm_pcm_teardown(struct snd_pcm_substream *substream)
++{
++	struct q6asm_dai_rtd *prtd = substream->runtime->private_data;
++	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
++	int ret;
++
++	if (prtd->pcm_open) {
++		prtd->state = Q6ASM_STREAM_STOPPED;
++		ret = q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
++		if (ret < 0)
++			return ret;
++		prtd->pcm_open = false;
++	}
++	if (prtd->pcm_routed) {
++		q6routing_stream_close(rtd->dai_link->id, substream->stream);
++		prtd->pcm_routed = false;
++	}
++	if (prtd->pcm_mapped) {
++		ret = q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
++		if (ret < 0)
++			return ret;
++		prtd->pcm_mapped = false;
++	}
++	return 0;
++}
++
+ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 			     struct snd_pcm_substream *substream)
+ {
+@@ -224,16 +254,9 @@
+ 	}
+ 
+ 	prtd->pcm_count = snd_pcm_lib_period_bytes(substream);
+-	/* rate and channels are sent to audio driver */
+-	if (prtd->state == Q6ASM_STREAM_RUNNING) {
+-		/* clear the previous setup if any  */
+-		q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
+-		q6asm_unmap_memory_regions(substream->stream,
+-					   prtd->audio_client);
+-		q6routing_stream_close(soc_prtd->dai_link->id,
+-					 substream->stream);
+-		prtd->state = Q6ASM_STREAM_STOPPED;
+-	}
++	ret = q6asm_pcm_teardown(substream);
++	if (ret < 0)
++		return ret;
+ 
+ 	ret = q6asm_map_memory_regions(substream->stream, prtd->audio_client,
+ 				       prtd->phys,
+@@ -243,8 +266,9 @@
+ 	if (ret < 0) {
+ 		dev_err(dev, "Audio Start: Buffer Allocation failed rc = %d\n",
+ 							ret);
+-		return -ENOMEM;
+-	}
++		return ret;
++	}
++	prtd->pcm_mapped = true;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		ret = q6asm_open_write(prtd->audio_client, prtd->stream_id,
+@@ -257,17 +281,21 @@
+ 	}
+ 
+ 	if (ret < 0) {
+-		dev_err(dev, "%s: q6asm_open_write failed\n", __func__);
+-		goto open_err;
+-	}
+-
++		dev_err(dev, "PCM %s open failed: %d\n",
++			substream->stream == SNDRV_PCM_STREAM_PLAYBACK ?
++			"playback" : "capture", ret);
++		goto teardown;
++	}
++
++	prtd->pcm_open = true;
+ 	prtd->session_id = q6asm_get_session_id(prtd->audio_client);
+ 	ret = q6routing_stream_open(soc_prtd->dai_link->id, LEGACY_PCM_MODE,
+ 			      prtd->session_id, substream->stream);
+ 	if (ret) {
+ 		dev_err(dev, "%s: stream reg failed ret:%d\n", __func__, ret);
+-		goto routing_err;
+-	}
++		goto teardown;
++	}
++	prtd->pcm_routed = true;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		ret = q6asm_media_format_block_multi_ch_pcm(
+@@ -280,26 +307,25 @@
+ 							   runtime->rate,
+ 							   runtime->channels,
+ 							   prtd->bits_per_sample);
+-
+-		/* Queue the buffers */
+-		for (i = 0; i < runtime->periods; i++)
+-			q6asm_read(prtd->audio_client, prtd->stream_id);
+-
+-	}
+-	if (ret < 0)
+-		dev_info(dev, "%s: CMD Format block failed\n", __func__);
+-	else
+-		prtd->state = Q6ASM_STREAM_RUNNING;
+-
+-	return ret;
+-
+-routing_err:
+-	q6asm_cmd(prtd->audio_client, prtd->stream_id,  CMD_CLOSE);
+-open_err:
+-	q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
+-	q6asm_audio_client_free(prtd->audio_client);
+-	prtd->audio_client = NULL;
+-
++	}
++	if (ret < 0) {
++		dev_err(dev, "PCM format block failed: %d\n", ret);
++		goto teardown;
++	}
++
++	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
++		for (i = 0; i < runtime->periods; i++) {
++			ret = q6asm_read(prtd->audio_client, prtd->stream_id);
++			if (ret < 0)
++				goto teardown;
++		}
++	}
++	prtd->state = Q6ASM_STREAM_RUNNING;
++	return 0;
++
++teardown:
++	if (q6asm_pcm_teardown(substream) < 0)
++		dev_err(dev, "PCM setup cleanup failed\n");
+ 	return ret;
+ }
+ 
+@@ -455,19 +481,17 @@
+ 	struct snd_pcm_runtime *runtime = substream->runtime;
+ 	struct snd_soc_pcm_runtime *soc_prtd = snd_soc_substream_to_rtd(substream);
+ 	struct q6asm_dai_rtd *prtd = runtime->private_data;
+-
+-	if (prtd->audio_client) {
+-		if (prtd->state)
+-			q6asm_cmd(prtd->audio_client, prtd->stream_id,
+-				  CMD_CLOSE);
+-
+-		q6asm_unmap_memory_regions(substream->stream,
+-					   prtd->audio_client);
+-		q6asm_audio_client_free(prtd->audio_client);
+-		prtd->audio_client = NULL;
+-	}
+-	q6routing_stream_close(soc_prtd->dai_link->id,
+-						substream->stream);
++	int ret;
++
++	ret = q6asm_pcm_teardown(substream);
++	if (ret < 0) {
++		dev_err(component->dev, "PCM final teardown failed: %d\n", ret);
++		if (prtd->pcm_open && prtd->pcm_mapped)
++			q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
++		if (prtd->pcm_routed)
++			q6routing_stream_close(soc_prtd->dai_link->id, substream->stream);
++	}
++	q6asm_audio_client_free(prtd->audio_client);
+ 	kfree(prtd);
+ 	return 0;
+ }
+--- a/sound/soc/qcom/qdsp6/q6asm.c
++++ b/sound/soc/qcom/qdsp6/q6asm.c
+@@ -524,6 +524,9 @@
+ 			buf[cnt].size = period_sz;
+ 		}
+ 	}
++	/* A new ring may have fewer periods than the previous mapping. */
++	ac->port[dir].dsp_buf = 0;
++	atomic_set(&ac->port[dir].hw_ptr, 0);
+ 	ac->port[dir].num_periods = periods;
+ 
+ 	spin_unlock_irqrestore(&ac->lock, flags);

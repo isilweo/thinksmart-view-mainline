@@ -1,0 +1,57 @@
+From: Lech Piekarski <isilweo@gmail.com>
+Subject: [PATCH] DEBUG: ASoC: qcom: qdsp6: dynamic debug traces for ASM, AFE and routing
+
+Not for upstream. Logs ASM command send/result, AFE DAI prepare/shutdown
+and routing decisions under dynamic debug, used to verify the q6asm-dai
+fix.
+
+Assisted-by: Codex:gpt-6.2-astra
+---
+--- a/sound/soc/qcom/qdsp6/q6asm.c
++++ b/sound/soc/qcom/qdsp6/q6asm.c
+@@ -884,6 +884,7 @@
+ 	ac->result.opcode = 0;
+ 	ac->result.status = 0;
+ 
++	dev_dbg(ac->dev, "ASM send port=%#x op=%#x\n", hdr->dest_port, hdr->opcode);
+ 	rc = apr_send_pkt(ac->adev, pkt);
+ 	if (rc < 0)
+ 		goto err;
+@@ -906,6 +907,7 @@
+ 
+ 
+ err:
++	dev_dbg(ac->dev, "ASM done port=%#x op=%#x rc=%d\n", hdr->dest_port, hdr->opcode, rc);
+ 	mutex_unlock(&ac->cmd_lock);
+ 	return rc;
+ }
+--- a/sound/soc/qcom/qdsp6/q6afe-dai.c
++++ b/sound/soc/qcom/qdsp6/q6afe-dai.c
+@@ -373,6 +373,7 @@
+ 	struct q6afe_dai_data *dai_data = dev_get_drvdata(dai->dev);
+ 	int rc;
+ 
++	dev_dbg(dai->dev, "AFE shutdown %s started=%d\n", dai->name, dai_data->is_port_started[dai->id]);
+ 	if (!dai_data->is_port_started[dai->id])
+ 		return;
+ 
+@@ -390,6 +391,7 @@
+ 	struct q6afe_dai_data *dai_data = dev_get_drvdata(dai->dev);
+ 	int rc;
+ 
++	dev_dbg(dai->dev, "AFE prepare %s started=%d\n", dai->name, dai_data->is_port_started[dai->id]);
+ 	if (dai_data->is_port_started[dai->id]) {
+ 		/* stop the port and restart with new port config */
+ 		rc = q6afe_port_stop(dai_data->port[dai->id]);
+--- a/sound/soc/qcom/qdsp6/q6routing.c
++++ b/sound/soc/qcom/qdsp6/q6routing.c
+@@ -374,6 +374,9 @@
+ 
+ 	session = &routing_data->sessions[stream_id - 1];
++	dev_dbg(routing_data->dev,
++		"route open fe=%d session=%d dir=%d port=%d\n",
++		fedai_id, stream_id, stream_type, session->port_id);
+ 	if (session->port_id < 0) {
+ 		dev_err(routing_data->dev, "Routing not setup for MultiMedia%d Session\n",
+ 			session->fedai_id);
+ 		return -EINVAL;

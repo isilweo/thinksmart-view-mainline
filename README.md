@@ -21,7 +21,9 @@ with Claude Code (Anthropic, model claude-opus-5-5) working on the
 tablets over SSH: it read the vendor device tree and logs, wrote the code,
 comments and changelogs, and built and tested each kernel on the device
 while I directed the work, checked the results and decided what to keep.
-The CAMSS rework (patches 0013-0020) was reviewed with Codex (OpenAI,
+The q6asm-dai fix in `kernel/audio/` was diagnosed and written by Codex
+(OpenAI, gpt-6.2-astra) from the kernel sources and our logs, then built and
+tested on the device. The CAMSS rework (patches 0013-0020) was reviewed with Codex (OpenAI,
 gpt-6.2-astra), which found an off-by-one in the UB split, a missing
 height limit, a burst length difference on MSM8916/MSM8939 and a probe
 behaviour change on MSM8939; those were fixed before testing. Testing:
@@ -50,7 +52,17 @@ those files.
 | Touch | Both FT8201 and HX83100A nodes enabled; the fitted one probes. |
 | Speaker TAS5782M | Uses Felix Kaechele's TAS5782M support (see `kernel/third-party/`). |
 
-Not done: echo cancellation, beamforming with the two DMICs.
+Not done: beamforming with the two DMICs.
+
+**Full-duplex audio and echo cancellation.** `kernel/audio/` has a fix for
+`q6asm-dai`: after a stream was stopped and prepared again, the driver opened
+the same ASM session a second time without closing it, the ADSP refused with
+error 9 (`ADSP_EALREADY`) and audio was dead until reboot. With the fix,
+PipeWire's WebRTC echo canceller (`userspace/pipewire/60-echo-cancel.conf`,
+needs the `pipewire-echo-cancel` and `pipewire-webrtc` packages) passed 20/20
+full-duplex cycles and removes about 40 dB of speaker echo; during loud
+playback it also ducks near-end speech, as echo cancellers do with the
+speaker this close to the microphones. Tested on one unit so far.
 
 **Camera colour.** Colour matrices and AWB gains were measured on a Datacolor
 SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and 6500 K,
@@ -73,10 +85,12 @@ before encoding.
 
 ```
 kernel/series/       28 patches, one change each (git format-patch)
-kernel/debug/        ramoops + Venus fw_debug parameter, not for upstream
+kernel/audio/        q6asm-dai stream lifetime fix (written with Codex)
+kernel/debug/        ramoops, Venus fw_debug, qdsp6 traces; not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
 kernel/config.fragment
 libcamera/           S5KC505A tuning files (libcamera 0.8.0 and 0.7.x)
+userspace/pipewire/  echo cancellation config
 LICENSES/            full license texts
 ```
 
@@ -183,12 +197,9 @@ rtspsrc location=rtsps://... protocols=tcp
   (`panic=120`). Our workaround is a userspace guard that watches `/dev/kmsg`
   and does a SysRq sync + reboot after 60 s of lockup, at most 3 times per
   hour. A proper watchdog in the DT would be better.
-- After long audio sessions the ADSP sometimes stops (`q6asm` error 9, no
-  sound); a reboot fixes it. Full-duplex use makes it much more likely: with
-  PipeWire's WebRTC echo canceller (which removes about 40 dB of speaker echo)
-  the capture stream fails when playback starts, or `q6asm_open_write` returns
-  error 9 after a few open/close cycles. This looks like a bug in the qdsp6
-  path for MSM8953 and is not solved yet.
+- Without the `kernel/audio/` fix, the ADSP stops after some audio stream
+  restarts (`q6asm` error 9, no sound until reboot); full-duplex use such as an
+  echo canceller makes it happen within a few cycles.
 
 ## Where the values come from
 
@@ -211,8 +222,9 @@ units are identified separately.
 
 ## License
 
-- Kernel driver changes (`kernel/series/0001`-`0013`, `0016`-`0023`, the C
-  part of `kernel/debug/`, `kernel/third-party/`): GPL-2.0-only, see
+- Kernel driver changes (`kernel/series/0001`-`0013`, `0016`-`0023`,
+  `kernel/audio/`, the C part of `kernel/debug/`, `kernel/third-party/`):
+  GPL-2.0-only, see
   `LICENSES/GPL-2.0-only.txt`.
 - The device tree binding change (`kernel/series/0014`):
   GPL-2.0-only OR BSD-2-Clause, like the binding it changes. See
@@ -222,5 +234,5 @@ units are identified separately.
   (`kernel/series/0024`-`0028` and the DTS part of `kernel/debug/`, original
   copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
   change. See `LICENSES/BSD-3-Clause.txt`.
-- `README.md`, `INSTALL.md`, `kernel/config.fragment` and the
-  `libcamera/*.yaml` tuning files: CC0-1.0, see `LICENSES/CC0-1.0.txt`.
+- `README.md`, `INSTALL.md`, `kernel/config.fragment`, the
+  `libcamera/*.yaml` tuning files and `userspace/`: CC0-1.0, see `LICENSES/CC0-1.0.txt`.
