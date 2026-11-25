@@ -1,7 +1,7 @@
 From 96e1d628e61b6e49beb285474b42f75b40e8fd9e Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 16/32] dt-bindings: media: qcom,msm8953-camss: add the VFE
+Subject: [PATCH 16/34] dt-bindings: media: qcom,msm8953-camss: add the VFE
  VBIF regions
 
 Each MSM8953 VFE has a VBIF block that the vendor software programs

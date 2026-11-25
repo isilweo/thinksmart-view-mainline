@@ -1,7 +1,7 @@
 From dc3a3d31e2ed6529151815ed79a3fc83eb42f93a Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 20/32] media: qcom: camss: vfe: use the 2048 word UB on
+Subject: [PATCH 20/34] media: qcom: camss: vfe: use the 2048 word UB on
  MSM8953
 
 Use 2048 unified buffer words for VFE0 on MSM8953 (VFE40_UB_SIZE_8952 in

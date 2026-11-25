@@ -1,7 +1,7 @@
 From bee7ca2a66d3681ac8ea1c984ed60b15bedf3ff5 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 13/32] media: ccs: report the default crop of the pixel array
+Subject: [PATCH 13/34] media: ccs: report the default crop of the pixel array
 
 libcamera reads V4L2_SEL_TGT_CROP_DEFAULT on the pixel array to learn the
 active area and logs an error when the driver does not support it.

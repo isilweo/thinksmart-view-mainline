@@ -29,7 +29,9 @@ height limit, a burst length difference on MSM8916/MSM8939 and a probe
 behaviour change on MSM8939; those were fixed before testing. The APSS
 watchdog patches (0031-0032) and the SDIO probe diagnostic in
 `kernel/debug/` were written by Codex from the vendor DT and kernel
-sources, then built and tested on the device. Testing:
+sources, then built and tested on the device. Codex also took apart the
+stock WLAN stack (qcacld-2.0 module and the msm-3.18 kernel from the
+device) to find how it powers the card, which led to 0033-0034. Testing:
 `checkpatch.pl --strict`, kernel builds without warnings in the changed
 files, and on the device libcamera `cam`, GStreamer pipelines and the
 sensor sysfs interfaces.
@@ -87,7 +89,7 @@ before encoding.
 ## Layout
 
 ```
-kernel/series/       32 patches, one change each (git format-patch)
+kernel/series/       34 patches, one change each (git format-patch)
 kernel/audio/        q6asm-dai stream lifetime fix (written with Codex)
 kernel/debug/        ramoops, Venus fw_debug, qdsp6 traces, SDIO probe stage; not for upstream
 kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
@@ -95,7 +97,7 @@ kernel/config.fragment
 libcamera/           S5KC505A tuning files (libcamera 0.8.0 and 0.7.x)
 userspace/pipewire/  echo cancellation config
 userspace/systemd/   systemd runtime watchdog drop-in
-userspace/wifi-guard/ rebinds ath10k_sdio when Wi-Fi did not come up at boot
+userspace/wifi-guard/ safety net: power cycles the WLAN card if Wi-Fi still fails at boot
 LICENSES/            full license texts
 ```
 
@@ -204,28 +206,43 @@ rtspsrc location=rtsps://... protocols=tcp
   board. Measured with idle CPUs, the reset comes later than programmed:
   about 115 s for a 30 s timeout and 56 s for 10 s. Our guess is that the
   counter pauses while all cores are in power collapse; not verified.
-- Wi-Fi (QCA9379, `ath10k_sdio`) sometimes cannot talk to the card at boot.
-  The driver logs -110 in one of three places: "timed out while setting
-  default block size" (the SDIO bus probe, located with `kernel/debug/0003`),
-  "unable to reset sdio" or "Could not init hif". On one of our five units it
-  happened in up to half of the boots, on the others rarely or never. The card
-  stays broken across warm reboots, and rebinding the SDIO function does not
-  help. Things that made no difference on that unit: `max-frequency` 100 MHz
-  instead of 177 MHz, keeping the unused `wlan_3v3` regulator (GPIO 77) on,
-  disabling runtime PM of the MMC host, loading `ath10k_sdio` earlier, and an
-  extra power cycle of the slot when the host starts. Unbinding and binding
-  the MMC host (`7864900.mmc`) does fix it, because that switches the card's
-  vmmc supply off: it worked every time we tried, in all three variants.
-  `userspace/wifi-guard/` does that at boot when the card is not bound to the
-  driver 15 s after the driver loaded, or when the driver logged -110 for the
-  card and `wlan0` is not up after 60 s; a missing link alone (access point
-  down) does not trigger it. It only touches `7864900.mmc`, at most twice. In 15 reboots
-  of the affected unit Wi-Fi came up every time, 2 of them after the guard
-  stepped in (about 110 s after boot instead of 40-50 s). The root cause is
-  still unknown.
+- Wi-Fi (QCA9379, `ath10k_sdio`) could fail at boot with -110 ("timed out
+  while setting default block size", "unable to reset sdio", "Could not init
+  hif"): on one of our five units in up to half of the boots, on the others
+  rarely. The card then stayed broken across warm reboots, because nothing
+  removed its supply. The stock Android kernel powers the card down right
+  after enumeration and powers it up again, with a full SDIO
+  reinitialization, when the WLAN driver loads. Patches 0033-0034 do the same
+  in the standard way: `cap-power-off-card` on SDHC2 lets the MMC core keep
+  the card off until `ath10k_sdio` probes, and L12 (the card's I/O supply)
+  stays on at 1.8 V as in the stock DT. Without the L12 part, resuming the card
+  failed with -EBUSY in about half of the boots on two other units. With both,
+  30 warm reboots each on the affected unit and on one of those brought Wi-Fi
+  up every time, with Bluetooth set up normally. Things that made no
+  difference before that: `max-frequency` 100 MHz, keeping the unused
+  `wlan_3v3` regulator on, disabling runtime PM of the MMC host, loading
+  `ath10k_sdio` earlier. `userspace/wifi-guard/` stays as a safety net: when
+  the card is not bound 15 s after the driver loaded, or the driver logged
+  -110 and `wlan0` is not up after 60 s, it unbinds and binds the MMC host
+  (`7864900.mmc`), which also power cycles the card; a missing link alone
+  (access point down) does not trigger it.
 - Without the `kernel/audio/` fix, the ADSP stops after some audio stream
   restarts (`q6asm` error 9, no sound until reboot); full-duplex use such as an
   echo canceller makes it happen within a few cycles.
+
+## Before upstreaming
+
+These patches run on our tablets, but not all of them are ready to be sent
+to the kernel. A review of the whole series with Codex found real bugs to fix
+first: 0002 (the HFI parser copies a property before checking its length),
+0008 (EOS state changed without `inst->lock`), 0009 (the PM reference is
+dropped before the EOS command is sent), 0024 (wrong sample delay after the
+integration time is changed through IIO) and 0025 (enabling a threshold event
+after autosuspend may not restart measurements). Several others need rework
+for the maintainers (0003-0005, 0007, 0011, 0012, 0026, 0029, 0030, and the
+TAS5782M diff). 0027 and 0028 are the closest to being sendable. Generic
+driver changes would go to the mainline lists; the board DTS is only in
+msm8953-mainline so far.
 
 ## Where the values come from
 
@@ -259,7 +276,7 @@ units are identified separately.
   `LICENSES/GPL-2.0-only.txt` and `LICENSES/BSD-2-Clause.txt`.
 - Device tree changes: `msm8953.dtsi` (`kernel/series/0017`, `0032`, original
   copyright (c) 2022 The Linux Foundation) and `apq8053-lenovo-cd-18781y.dts`
-  (`kernel/series/0026`-`0030` and the DTS part of `kernel/debug/`, original
+  (`kernel/series/0026`-`0030`, `0033`-`0034` and the DTS part of `kernel/debug/`, original
   copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
   change. See `LICENSES/BSD-3-Clause.txt`.
 - `README.md`, `INSTALL.md`, `kernel/config.fragment`, the

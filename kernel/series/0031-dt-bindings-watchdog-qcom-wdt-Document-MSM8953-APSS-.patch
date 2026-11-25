@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 18:00:00 +0100
-Subject: [PATCH 31/32] dt-bindings: watchdog: qcom-wdt: Document MSM8953 APSS watchdog
+Subject: [PATCH 31/34] dt-bindings: watchdog: qcom-wdt: Document MSM8953 APSS watchdog
 
 
 The MSM8953 APSS watchdog uses the KPSS register layout. Allow its

@@ -1,7 +1,7 @@
 From ce9dec2ae27b3fbfd55c239e04eb7b16148fad39 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 21/32] media: qcom: camss: vfe-4-1: program the buffer size in
+Subject: [PATCH 21/34] media: qcom: camss: vfe-4-1: program the buffer size in
  frame based mode
 
 In frame based mode (RDI) the write master buffer configuration

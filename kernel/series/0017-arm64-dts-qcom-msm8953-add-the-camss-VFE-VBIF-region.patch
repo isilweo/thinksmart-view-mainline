@@ -1,7 +1,7 @@
 From acf3337bf86e8dc6e450d6ba328d7b30f0ebc879 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 17/32] arm64: dts: qcom: msm8953: add the camss VFE VBIF
+Subject: [PATCH 17/34] arm64: dts: qcom: msm8953: add the camss VFE VBIF
  regions
 
 Add the VFE0 and VFE1 VBIF register regions to the camss node so the

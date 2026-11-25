@@ -1,7 +1,7 @@
 From c31f32c984e5baddbfecb461df3b51d8667ffb34 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 14/32] media: qcom: camss: read the link frequency from the
+Subject: [PATCH 14/34] media: qcom: camss: read the link frequency from the
  transmitter
 
 camss_get_link_freq() looks up the link frequency on the first entity

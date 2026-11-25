@@ -1,7 +1,7 @@
 From a8a45c5c9858f5edf30559a45d0fc1b3d554109b Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 15/32] media: qcom: camss: give MSM8953 its own CSIPHY
+Subject: [PATCH 15/34] media: qcom: camss: give MSM8953 its own CSIPHY
  resources
 
 MSM8953 and SDM450 reuse the MSM8996 CSIPHY table. On MSM8953 the CSIPHY

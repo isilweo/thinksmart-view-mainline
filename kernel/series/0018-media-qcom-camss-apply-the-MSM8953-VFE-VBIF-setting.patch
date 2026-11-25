@@ -1,7 +1,7 @@
 From 35c1b7210f75d89357f3e70311eea0b01237bbd1 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 18/32] media: qcom: camss: apply the MSM8953 VFE VBIF setting
+Subject: [PATCH 18/34] media: qcom: camss: apply the MSM8953 VFE VBIF setting
 
 Program the VBIF register of each MSM8953 VFE as the vendor software does
 (vbif-regs = <0x124>, vbif-settings = <0x3>). vfe_vbif_apply_settings()

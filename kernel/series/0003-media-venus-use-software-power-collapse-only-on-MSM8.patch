@@ -1,7 +1,7 @@
 From 205099c77bf1caccd29c381701e413df1a04fed5 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:35 +0100
-Subject: [PATCH 03/32] media: venus: use software power collapse only on
+Subject: [PATCH 03/34] media: venus: use software power collapse only on
  MSM8953
 
 The vendor kernel uses software power collapse only on MSM8953 (Venus

@@ -1,7 +1,7 @@
 From f60a0c07ff02f2a48365658bc6b7fd0f3bdd5c29 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 22/32] media: qcom: camss: drop the low VFE clock levels on
+Subject: [PATCH 22/34] media: qcom: camss: drop the low VFE clock levels on
  MSM8953
 
 For RDI the computed VFE rate is about 45 MHz, which cannot keep up with

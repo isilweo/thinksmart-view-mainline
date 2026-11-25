@@ -1,7 +1,7 @@
 From 649a41f1abed9736a508194d3feb4df8f1212bb9 Mon Sep 17 00:00:00 2001
 From: Lech Piekarski <isilweo@gmail.com>
 Date: Tue, 24 Nov 2026 19:38:36 +0100
-Subject: [PATCH 30/32] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
+Subject: [PATCH 30/34] arm64: dts: qcom: apq8053-lenovo-cd-18781y: add the
  front camera
 
 Describe the Samsung S5KC505A front camera on CCI0 (address 0x37) and
