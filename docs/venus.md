@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | H.264 encoder | `v4l2h264enc`: bitrate control works (a 1 Mb/s target gives 931-959 kb/s); 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
-| H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC. |
+| H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC in the case we hit; the review still found a locking issue in the EOS handling. |
 | H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core. |
 
 ## Notes

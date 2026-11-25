@@ -1,4 +1,4 @@
-Copyright (c) 2026, Lech Piekarski (changes in kernel/series/0014) 
+Copyright (c) 2026, Lech Piekarski (changes to device tree bindings in isilweo/linux, tag tsv-v7.0.9-r39)
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 

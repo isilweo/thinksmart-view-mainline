@@ -57,7 +57,7 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    cp -r pmaports/device/community/linux-postmarketos-qcom-msm8953 \
          pmaports/device/community/thinksmart-view-extras \
          "$(pmbootstrap config aports)"/device/community/
-   cp -r pmaports/temp/libcamera "$(pmbootstrap config aports)"/temp/
+   cp -r pmaports/temp/libcamera pmaports/temp/pipewire "$(pmbootstrap config aports)"/temp/
    ```
    - `linux-postmarketos-qcom-msm8953` (7.0.9-r39) is the postmarketOS kernel
      package with one patch, `git diff v7.0.9-r0 tsv-v7.0.9-r39` of
@@ -66,8 +66,11 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    - `libcamera` is libcamera 0.8.0 (pmaports master `temp/libcamera`) with the
      S5KC505A helper from rebrch/tsv-nura and our tuning file. If the build runs
      out of memory in a container, build without the Python bindings
-     (`-Dpycamera=disabled`). On v26.06, PipeWire has to be rebuilt against
-     libcamera 0.8, see [docs/camera.md](docs/camera.md);
+     (`-Dpycamera=disabled`);
+   - `pipewire` is PipeWire 1.6.11 from Alpine edge (it carries a libcamera
+     0.8 compatibility patch), without the onnx filter-graph subpackage. On
+     v26.06 the Alpine 3.24 PipeWire is built against libcamera 0.7 and blocks
+     the upgrade. Build it after libcamera;
    - `thinksmart-view-extras`: Wi-Fi boot guard and the systemd watchdog
      setting; `thinksmart-view-extras-echo-cancel`: PipeWire echo cancellation.
 2. `soc-qcom-msm8953`: set the UCM `provider_priority=10`, otherwise apk may pick
@@ -76,6 +79,7 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    ```bash
    pmbootstrap checksum soc-qcom-msm8953
    pmbootstrap build linux-postmarketos-qcom-msm8953 libcamera soc-qcom-msm8953 thinksmart-view-extras --force
+   pmbootstrap build pipewire --force
    ```
 4. Add `thinksmart-view-extras` (and `thinksmart-view-extras-echo-cancel` if you
    want it) to `extra_packages` below.
@@ -86,7 +90,7 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    ui = console
    systemd = always
    boot_size = 512
-   extra_packages = thinksmart-view-extras,cage,openssh-server,v4l-utils,i2c-tools,pipewire,wireplumber,pipewire-pulse,alsa-utils,libcamera-tools,iio-sensor-proxy,mesa-dri-gallium,mesa-egl,mesa-gbm,rsync
+   extra_packages = thinksmart-view-extras,libcamera-gstreamer,gst-plugins-good,gst-plugins-bad,cage,openssh-server,v4l-utils,i2c-tools,pipewire,wireplumber,pipewire-pulse,alsa-utils,libcamera-tools,iio-sensor-proxy,mesa-dri-gallium,mesa-egl,mesa-gbm,rsync
 
    [providers]
    alsa-ucm-conf = soc-qcom-msm8953-ucm
@@ -158,7 +162,13 @@ sudo resize2fs "$ROOT"                          # grow the root fs to the end of
 
 ## 5. Check
 
-- `uname -r` shows `7.0.9-msm8953`; `systemctl --failed` is empty.
+- `apk info -v linux-postmarketos-qcom-msm8953` shows `7.0.9-r39` (`uname -r`
+  says `7.0.9-msm8953` for any build); `systemctl --failed` is empty.
+- Wi-Fi: `cat /sys/bus/mmc/devices/mmc1:0001/power/runtime_suspended_time` is
+  more than zero (the card was powered off before the driver probed);
+  `systemctl is-enabled wifi-guard.service` says `enabled`, and
+  `journalctl -b -u wifi-guard.service` shows whether it had to act.
+- Watchdog: `cat /sys/class/watchdog/watchdog0/state` says `active`.
 - GPU: `/dev/dri/renderD128` exists and Mesa uses freedreno, not llvmpipe.
 - Sensors: `monitor-sensor` shows orientation and light;
   `/sys/bus/iio/devices/*/in_proximity_raw` rises with a hand in front of the
