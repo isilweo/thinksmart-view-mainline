@@ -1,0 +1,1841 @@
+diff --git a/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml b/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
+index 6d776b0ca..21944750e 100644
+--- a/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
++++ b/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
+@@ -170,9 +170,10 @@ properties:
+ 
+   reg:
+     minItems: 13
+-    maxItems: 13
++    maxItems: 15
+ 
+   reg-names:
++    minItems: 13
+     items:
+       - const: csi_clk_mux
+       - const: csid0
+@@ -187,6 +188,8 @@ properties:
+       - const: ispif
+       - const: vfe0
+       - const: vfe1
++      - const: vfe0_vbif
++      - const: vfe1_vbif
+ 
+   vdda-supply:
+     description:
+diff --git a/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml b/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
+index 9f861045b..03e85aa73 100644
+--- a/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
++++ b/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
+@@ -25,6 +25,7 @@ properties:
+               - qcom,apss-wdt-ipq9574
+               - qcom,apss-wdt-kaanapali
+               - qcom,apss-wdt-msm8226
++              - qcom,apss-wdt-msm8953
+               - qcom,apss-wdt-msm8974
+               - qcom,apss-wdt-msm8994
+               - qcom,apss-wdt-qcm2290
+diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+index cecb92fea..e92963c2d 100644
+--- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
++++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
+@@ -91,6 +91,10 @@ accelerometer@18 {
+ 			vdd-supply = <&pm8953_l10>;
+ 			vddio-supply = <&pm8953_l6>;
+ 
++			mount-matrix = "0", "-1", "0",
++				       "1", "0", "0",
++				       "0", "0", "1";
++
+ 			pinctrl-0 = <&accel_int_default>;
+ 			pinctrl-names = "default";
+ 		};
+@@ -100,19 +104,25 @@ light-sensor@51 {
+ 			reg = <0x51>;
+ 
+ 			interrupt-parent = <&tlmm>;
+-			interrupts = <43 IRQ_TYPE_EDGE_RISING>;
++			interrupts = <43 IRQ_TYPE_EDGE_FALLING>;
+ 			interrupt-names = "INT1";
+ 
++			vdd-supply = <&pm8953_l10>;
++			vddio-supply = <&pm8953_l6>;
++
+ 			pinctrl-0 = <&alsp_int_default>;
+ 			pinctrl-names = "default";
+ 
+ 			/*
+-			 * WARNING: Do not enable for now!
+-			 * There's a chance that this can burn out the sensor's IR LED.
+-			 * The sensor turns on the IR LED at high power (so that it
+-			 * gets noticeably warm) and never turns it off.
++			 * Safe to enable together with the vcnl4000 driver change that
++			 * programs the VCNL4200 IR LED like the stock Lenovo firmware
++			 * (2 pulses of 75 mA, PS_IT 8T, duty 1/1280) instead of 8 pulses
++			 * of 120 mA, which made the LED run hot.
++			 * Level 2 = 32 counts (the driver divides by 16). Background with
++			 * a clean window is 0-3, but up to ~60 under incandescent lamps,
++			 * so userspace may want a higher threshold.
+ 			 */
+-			status = "disabled";
++			proximity-near-level = <2>;
+ 		};
+ 	};
+ 
+@@ -287,7 +297,7 @@ ft8201_ts: touchscreen@38 {
+ 		touchscreen-size-x = <800>;
+ 		touchscreen-size-y = <1280>;
+ 
+-		status = "disabled";
++		status = "okay"; /* only one of the two controllers is fitted */
+ 	};
+ 
+ 	hx83100a_ts: touchscreen@48 {
+@@ -309,7 +319,7 @@ hx83100a_ts: touchscreen@48 {
+ 		touchscreen-size-x = <800>;
+ 		touchscreen-size-y = <1280>;
+ 
+-		status = "disabled";
++		status = "okay"; /* only one of the two controllers is fitted */
+ 	};
+ };
+ 
+@@ -455,8 +465,8 @@ pm8953_l1: l1 {
+ 		};
+ 
+ 		pm8953_l2: l2 {
+-			regulator-min-microvolt = <975000>;
+-			regulator-max-microvolt = <1225000>;
++			regulator-min-microvolt = <1200000>;
++			regulator-max-microvolt = <1200000>;
+ 			regulator-always-on;
+ 		};
+ 
+@@ -508,7 +518,8 @@ pm8953_l11: l11 {
+ 
+ 		pm8953_l12: l12 {
+ 			regulator-min-microvolt = <1800000>;
+-			regulator-max-microvolt = <2950000>;
++			regulator-max-microvolt = <1800000>;
++			regulator-always-on;
+ 		};
+ 
+ 		pm8953_l13: l13 {
+@@ -560,6 +571,7 @@ &sdhc_2 {
+ 	vqmmc-supply = <&pm8953_l12>;
+ 
+ 	mmc-pwrseq = <&wlan_pwrseq>;
++	cap-power-off-card;
+ 	non-removable;
+ 	wakeup-source;
+ 	/* Some devices experience dropouts of the WiFi module at the default of
+@@ -610,7 +622,7 @@ pmx_mdss_sleep: pmx-mdss-sleep-state {
+ 	};
+ 
+ 	sensor_i2c_default: sensor-i2c-default-state {
+-		pins = "gpio14", "gpio15";
++		pins = "gpio6", "gpio7";
+ 		function = "gpio";
+ 		drive-strength = <2>;
+ 		bias-disable;
+@@ -739,3 +751,99 @@ &uart_0 {
+ &usb3 {
+ 	status = "okay";
+ };
++
++/ {
++	reserved-memory {
++		ramoops@b0000000 {
++			compatible = "ramoops";
++			reg = <0x0 0xb0000000 0x0 0x100000>;
++			record-size = <0x20000>;
++			console-size = <0x40000>;
++			pmsg-size = <0x20000>;
++		};
++	};
++
++	cam_vdig: cam-vdig-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vdig";
++		gpio = <&tlmm 118 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&pm8953_l2>;
++	};
++
++	cam_vana: cam-vana-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vana";
++		gpio = <&tlmm 119 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&pm8953_l17>;
++	};
++
++	cam_vcore: cam-vcore-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_vcore";
++		gpio = <&tlmm 134 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&cam_vdig>;
++	};
++
++	/* CAM_STANDBY0: ccs only handles the reset GPIO */
++	cam_standby: cam-standby-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "cam_standby";
++		gpio = <&tlmm 39 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		startup-delay-us = <1000>;
++		vin-supply = <&cam_vcore>;
++	};
++};
++
++&cci {
++	status = "okay";
++};
++
++&cci_i2c0 {
++	camera@37 {
++		compatible = "mipi-ccs-1.0", "mipi-ccs";
++		reg = <0x37>;
++
++		clocks = <&gcc GCC_CAMSS_MCLK0_CLK>;
++		assigned-clocks = <&gcc MCLK0_CLK_SRC>;
++		assigned-clock-rates = <24000000>;
++		clock-frequency = <24000000>;
++
++		pinctrl-0 = <&camss_mclk0_default>;
++		pinctrl-names = "default";
++
++		vcore-supply = <&cam_standby>;
++		vio-supply = <&pm8953_l6>;
++		vana-supply = <&cam_vana>;
++		reset-gpios = <&tlmm 40 GPIO_ACTIVE_LOW>;
++
++		rotation = <270>;
++		orientation = <0>;
++
++		port {
++			cam_s5kc505a_ep: endpoint {
++				remote-endpoint = <&camss_csiphy0_ep>;
++				data-lanes = <1 2>;
++				link-frequencies = /bits/ 64 <480000000>;
++			};
++		};
++	};
++};
++
++&camss {
++	status = "okay";
++
++	ports {
++		port@0 {
++			reg = <0>;
++
++			camss_csiphy0_ep: endpoint {
++				remote-endpoint = <&cam_s5kc505a_ep>;
++				data-lanes = <0 1>;
++			};
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/qcom/msm8953.dtsi b/arch/arm64/boot/dts/qcom/msm8953.dtsi
+index 79838fc01..03c641ab1 100644
+--- a/arch/arm64/boot/dts/qcom/msm8953.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8953.dtsi
+@@ -1761,7 +1761,9 @@ camss: camss@1b00020 {
+ 			      <0x1b00040 0x4>,
+ 			      <0x1b31000 0x500>,
+ 			      <0x1b10000 0x1000>,
+-			      <0x1b14000 0x1000>;
++			      <0x1b14000 0x1000>,
++			      <0x1b40000 0x200>,
++			      <0x1ba0000 0x200>;
+ 			reg-names = "csi_clk_mux",
+ 				    "csid0",
+ 				    "csid1",
+@@ -1774,7 +1776,9 @@ camss: camss@1b00020 {
+ 				    "csiphy2_clk_mux",
+ 				    "ispif",
+ 				    "vfe0",
+-				    "vfe1";
++				    "vfe1",
++				    "vfe0_vbif",
++				    "vfe1_vbif";
+ 
+ 			clocks = <&gcc GCC_CAMSS_AHB_CLK>,
+ 				 <&gcc GCC_CAMSS_CSI0_CLK>,
+@@ -2899,6 +2903,14 @@ apcscc: clock-controller@b011050 {
+ 			#interconnect-cells = <1>;
+ 		};
+ 
++		watchdog@b017000 {
++			compatible = "qcom,apss-wdt-msm8953", "qcom,kpss-wdt";
++			reg = <0x0b017000 0x1000>;
++			interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>,
++				     <GIC_SPI 4 IRQ_TYPE_EDGE_RISING>;
++			clocks = <&sleep_clk>;
++		};
++
+ 		cpr: power-controller@b018000 {
+ 			compatible = "qcom,msm8953-cpr4pd";
+ 
+diff --git a/drivers/clk/qcom/gcc-msm8953.c b/drivers/clk/qcom/gcc-msm8953.c
+index c4ec9950a..de228a76b 100644
+--- a/drivers/clk/qcom/gcc-msm8953.c
++++ b/drivers/clk/qcom/gcc-msm8953.c
+@@ -3873,7 +3873,6 @@ static struct gdsc venus_core0_gdsc = {
+ 	.pd = {
+ 		.name = "venus_core0",
+ 	},
+-	.flags = HW_CTRL,
+ 	.pwrsts = PWRSTS_OFF_ON,
+ };
+ 
+diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
+index a36c23813..fed7bbdfb 100644
+--- a/drivers/iio/light/vcnl4000.c
++++ b/drivers/iio/light/vcnl4000.c
+@@ -23,6 +23,7 @@
+ #include <linux/err.h>
+ #include <linux/delay.h>
+ #include <linux/pm_runtime.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/interrupt.h>
+ #include <linux/units.h>
+ 
+@@ -122,6 +123,15 @@
+ 	(FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4040_CONF3_PS_MPS_16BITS) | \
+ 	 FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4040_CONF3_PS_LED_I_16BITS))
+ 
++/* VCNL4200 low-power IR LED settings, as used by the vendor ADSP driver */
++#define VCNL4200_PS_CONF1_PS_DUTY	GENMASK(7, 6)
++#define VCNL4200_PS_DUTY_1_1280		3
++#define VCNL4200_PS_IT_8T		4
++#define VCNL4200_PS_LED_I_75MA		1
++#define VCNL4200_PS_MPS_2		1
++
++static const char * const vcnl4000_supplies[] = { "vdd", "vddio" };
++
+ static const int vcnl4010_prox_sampling_frequency[][2] = {
+ 	{1, 950000},
+ 	{3, 906250},
+@@ -385,8 +395,8 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 	case VCNL4200_PROD_ID:
+ 		/* Default wait time is 50ms, add 20% tolerance. */
+ 		data->vcnl4200_al.sampling_rate = ktime_set(0, 60000 * 1000);
+-		/* Default wait time is 4.8ms, add 20% tolerance. */
+-		data->vcnl4200_ps.sampling_rate = ktime_set(0, 5760 * 1000);
++		/* 4.8 ms x 8 (duty 1/1280) x 8 (PS_IT 8T), add 20% tolerance. */
++		data->vcnl4200_ps.sampling_rate = ktime_set(0, 368640 * 1000);
+ 		break;
+ 	case VCNL4040_PROD_ID:
+ 		/* Default wait time is 80ms, add 20% tolerance. */
+@@ -406,6 +416,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 		return ret;
+ 
+ 	regval = ret | VCNL4040_PS_CONF2_PS_HD;
++	if (id == VCNL4200_PROD_ID) {
++		regval &= ~VCNL4200_PS_CONF1_PS_DUTY;
++		regval &= ~VCNL4040_PS_CONF2_PS_IT;
++		regval |= FIELD_PREP(VCNL4200_PS_CONF1_PS_DUTY,
++				     VCNL4200_PS_DUTY_1_1280) |
++			  FIELD_PREP(VCNL4040_PS_CONF2_PS_IT, VCNL4200_PS_IT_8T);
++	}
+ 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF1,
+ 					regval);
+ 	if (ret < 0)
+@@ -416,7 +433,13 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
++	if (id == VCNL4200_PROD_ID) {
++		regval = ret & ~(VCNL4040_PS_CONF3_MPS | VCNL4040_PS_MS_LED_I);
++		regval |= FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4200_PS_MPS_2) |
++			  FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4200_PS_LED_I_75MA);
++	} else {
++		regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
++	}
+ 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF3,
+ 					regval);
+ 	if (ret < 0)
+@@ -1959,6 +1982,14 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	if (!indio_dev)
+ 		return -ENOMEM;
+ 
++	ret = devm_regulator_bulk_get_enable(&client->dev,
++					     ARRAY_SIZE(vcnl4000_supplies),
++					     vcnl4000_supplies);
++	if (ret)
++		return dev_err_probe(&client->dev, ret,
++				     "failed to enable regulators\n");
++	fsleep(10000); /* VCNL4200 power-up time is < 3 ms */
++
+ 	data = iio_priv(indio_dev);
+ 	i2c_set_clientdata(client, indio_dev);
+ 	data->client = client;
+@@ -2025,6 +2056,8 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	pm_runtime_enable(&client->dev);
+ 	pm_runtime_set_autosuspend_delay(&client->dev, VCNL4000_SLEEP_DELAY_MS);
+ 	pm_runtime_use_autosuspend(&client->dev);
++	pm_runtime_mark_last_busy(&client->dev);
++	pm_request_autosuspend(&client->dev);
+ 
+ 	return 0;
+ fail_poweroff:
+diff --git a/drivers/media/i2c/ccs/ccs-core.c b/drivers/media/i2c/ccs/ccs-core.c
+index 8e25f970f..ef9f1898d 100644
+--- a/drivers/media/i2c/ccs/ccs-core.c
++++ b/drivers/media/i2c/ccs/ccs-core.c
+@@ -48,6 +48,7 @@ static struct ccs_limit_offset {
+  * ccs_module_idents - supported camera modules
+  */
+ static const struct ccs_module_ident ccs_module_idents[] = {
++	CCS_IDENT_LQ(0x00, 0x5034, -1, "s5kc505a", &smiapp_s5kc505a_quirk),
+ 	CCS_IDENT_L(0x01, 0x022b, -1, "vs6555"),
+ 	CCS_IDENT_L(0x01, 0x022e, -1, "vw6558"),
+ 	CCS_IDENT_L(0x07, 0x7698, -1, "ovm7698"),
+@@ -2517,6 +2518,7 @@ static int ccs_sel_supported(struct v4l2_subdev *subdev,
+ 			return 0;
+ 		return -EINVAL;
+ 	case V4L2_SEL_TGT_NATIVE_SIZE:
++	case V4L2_SEL_TGT_CROP_DEFAULT:
+ 		if (ssd == sensor->pixel_array && sel->pad == CCS_PA_PAD_SRC)
+ 			return 0;
+ 		return -EINVAL;
+@@ -2586,6 +2588,30 @@ static void ccs_get_native_size(struct ccs_subdev *ssd, struct v4l2_rect *r)
+ 	r->height = CCS_LIM(ssd->sensor, Y_ADDR_MAX) + 1;
+ }
+ 
++/*
++ * Only the pixel array has a fixed size; the binner and scaler sizes depend
++ * on crop and compose.
++ */
++static int ccs_enum_frame_size(struct v4l2_subdev *subdev,
++			       struct v4l2_subdev_state *sd_state,
++			       struct v4l2_subdev_frame_size_enum *fse)
++{
++	struct ccs_sensor *sensor = to_ccs_sensor(subdev);
++	struct v4l2_rect r;
++
++	if (subdev != &sensor->pixel_array->sd || fse->index ||
++	    fse->code != sensor->internal_csi_format->code)
++		return -EINVAL;
++
++	ccs_get_native_size(sensor->pixel_array, &r);
++	fse->min_width = r.width;
++	fse->max_width = r.width;
++	fse->min_height = r.height;
++	fse->max_height = r.height;
++
++	return 0;
++}
++
+ static int ccs_get_selection(struct v4l2_subdev *subdev,
+ 			     struct v4l2_subdev_state *sd_state,
+ 			     struct v4l2_subdev_selection *sel)
+@@ -2607,6 +2633,7 @@ static int ccs_get_selection(struct v4l2_subdev *subdev,
+ 	switch (sel->target) {
+ 	case V4L2_SEL_TGT_CROP_BOUNDS:
+ 	case V4L2_SEL_TGT_NATIVE_SIZE:
++	case V4L2_SEL_TGT_CROP_DEFAULT:
+ 		if (ssd == sensor->pixel_array) {
+ 			ccs_get_native_size(ssd, &sel->r);
+ 		} else if (sel->pad == ssd->sink_pad) {
+@@ -3108,6 +3135,7 @@ static const struct v4l2_subdev_video_ops ccs_video_ops = {
+ 
+ static const struct v4l2_subdev_pad_ops ccs_pad_ops = {
+ 	.enum_mbus_code = ccs_enum_mbus_code,
++	.enum_frame_size = ccs_enum_frame_size,
+ 	.get_fmt = ccs_get_format,
+ 	.set_fmt = ccs_set_format,
+ 	.get_selection = ccs_get_selection,
+diff --git a/drivers/media/i2c/ccs/ccs-quirk.c b/drivers/media/i2c/ccs/ccs-quirk.c
+index e48a4fa1f..7705e3c33 100644
+--- a/drivers/media/i2c/ccs/ccs-quirk.c
++++ b/drivers/media/i2c/ccs/ccs-quirk.c
+@@ -215,3 +215,136 @@ static int tcm8500md_limits(struct ccs_sensor *sensor)
+ const struct ccs_quirk smiapp_tcm8500md_quirk = {
+ 	.limits = tcm8500md_limits,
+ };
++
++/*
++ * Samsung S5KC505A: incomplete clock limit registers, dual PLL, and a vendor
++ * init sequence taken from the Lenovo libmmcamera_s5kc505a.so.
++ */
++static int s5kc505a_limits(struct ccs_sensor *sensor)
++{
++	ccs_replace_limit(sensor, CCS_L_CLOCK_TREE_PLL_CAPABILITY, 0,
++			  CCS_CLOCK_TREE_PLL_CAPABILITY_DUAL_PLL);
++	ccs_replace_limit(sensor, CCS_L_CLOCK_CALCULATION, 0,
++			  CCS_CLOCK_CALCULATION_LANE_SPEED);
++	/* vendor mode timing; shorter blanking makes the VFE drop lines */
++	ccs_replace_limit(sensor, CCS_L_MIN_LINE_BLANKING_PCK, 0, 504);
++	ccs_replace_limit(sensor, CCS_L_MIN_FRAME_BLANKING_LINES, 0, 70);
++	/* lower VT PLL rates clip white; the *_MHZ limits are IEEE 754 floats */
++	ccs_replace_limit(sensor, CCS_L_MIN_PLL_OP_CLK_FREQ_MHZ, 0, 0x44098000); /* 550 */
++	ccs_replace_limit(sensor, CCS_L_MAX_PLL_OP_CLK_FREQ_MHZ, 0, 0x44160000); /* 600 */
++	ccs_replace_limit(sensor, CCS_L_MIN_VT_SYS_CLK_DIV, 0, 1);
++	ccs_replace_limit(sensor, CCS_L_MAX_VT_SYS_CLK_DIV, 0, 1);
++	ccs_replace_limit(sensor, CCS_L_MIN_VT_SYS_CLK_FREQ_MHZ, 0, 0x42c80000); /* 100 */
++	ccs_replace_limit(sensor, CCS_L_MAX_VT_SYS_CLK_FREQ_MHZ, 0, 0x447a0000); /* 1000 */
++	ccs_replace_limit(sensor, CCS_L_MAX_VT_PIX_CLK_FREQ_MHZ, 0, 0x43480000); /* 200 */
++	ccs_replace_limit(sensor, CCS_L_MIN_OP_SYS_CLK_DIV, 0, 1);
++	ccs_replace_limit(sensor, CCS_L_MAX_OP_SYS_CLK_DIV, 0, 1);
++	ccs_replace_limit(sensor, CCS_L_MIN_OP_SYS_CLK_FREQ_MHZ, 0, 0x42c80000); /* 100 */
++	ccs_replace_limit(sensor, CCS_L_MAX_OP_SYS_CLK_FREQ_MHZ, 0, 0x447a0000); /* 1000 */
++	ccs_replace_limit(sensor, CCS_L_MIN_OP_PIX_CLK_DIV, 0, 8);
++	ccs_replace_limit(sensor, CCS_L_MAX_OP_PIX_CLK_DIV, 0, 10);
++	ccs_replace_limit(sensor, CCS_L_MIN_OP_PIX_CLK_FREQ_MHZ, 0, 0x41200000); /* 10 */
++	ccs_replace_limit(sensor, CCS_L_MAX_OP_PIX_CLK_FREQ_MHZ, 0, 0x43480000); /* 200 */
++	return 0;
++}
++
++/* cci_write() needs the register width, unlike ccs_write_addr_8s() */
++static int s5kc505a_write(struct ccs_sensor *sensor,
++			  const struct ccs_reg_8 *regs, int len)
++{
++	int rval;
++
++	for (; len > 0; len--, regs++) {
++		rval = ccs_write_addr(sensor, CCI_REG8(regs->reg), regs->val);
++		if (rval)
++			return rval;
++	}
++
++	return 0;
++}
++
++static int s5kc505a_post_poweron(struct ccs_sensor *sensor)
++{
++	static const struct ccs_reg_8 init[] = {
++		{ 0x0a02, 0x0f },
++		{ 0x340f, 0x80 },
++		{ 0x3457, 0x04 },
++		{ 0x3419, 0x00 },
++		{ 0x3416, 0x40 },
++		{ 0x3418, 0x00 },
++		{ 0x3419, 0x04 },
++		{ 0x3419, 0x00 },
++		{ 0x3416, 0x40 },
++		{ 0x3418, 0x24 },
++		{ 0x3419, 0x04 },
++		{ 0x3419, 0x00 },
++		{ 0x3416, 0x40 },
++		{ 0x3418, 0x48 },
++		{ 0x3419, 0x04 },
++		{ 0x3419, 0x00 },
++		{ 0x3416, 0x40 },
++		{ 0x3418, 0x6c },
++		{ 0x3419, 0x04 },
++		{ 0x3419, 0x00 },
++		{ 0x3457, 0x0c },
++		{ 0x3457, 0x04 },
++		{ 0x307c, 0x16 },
++		{ 0x3087, 0xdc },
++		{ 0x3089, 0x0a },
++		{ 0x308b, 0x08 },
++		{ 0x308c, 0x0b },
++		{ 0x308e, 0x36 },
++		{ 0x3075, 0x4d },
++		{ 0x306f, 0xa8 },
++		{ 0x306a, 0x79 },
++		{ 0x3077, 0x10 },
++		{ 0x30b0, 0xc8 },
++		{ 0x3078, 0x17 },
++		{ 0x3070, 0x0f },
++		{ 0x0b00, 0x01 },
++		{ 0x0801, 0x10 },
++		{ 0x0804, 0x10 },
++		{ 0x3931, 0x02 },
++		{ 0x3930, 0x80 },
++		{ 0x3932, 0x60 },
++	};
++	static const struct ccs_reg_8 mode[] = {
++		{ 0x3c17, 0x00 },
++		{ 0x3c1f, 0x00 },
++		{ 0x0820, 0x03 },
++		{ 0x0821, 0xc0 },
++		{ 0x0b05, 0x01 },
++		{ 0x3303, 0x02 },
++		{ 0x3301, 0x00 },
++		{ 0x3400, 0x00 },
++		{ 0x0b00, 0x00 },
++		{ 0x3459, 0x75 },
++		{ 0x3c0f, 0x01 },
++		{ 0x300f, 0x01 },
++		{ 0x3010, 0x77 },
++		{ 0x3014, 0x01 },
++		{ 0x3015, 0x86 },
++		{ 0x3929, 0x07 },
++		{ 0x3906, 0x76 },
++		{ 0x3c02, 0x00 },
++		{ 0x3c03, 0xff },
++	};
++	int rval;
++
++	/* the vendor sequence waits 10 ms after the first write */
++	rval = s5kc505a_write(sensor, init, 1);
++	if (rval)
++		return rval;
++	usleep_range(10000, 11000);
++
++	rval = s5kc505a_write(sensor, init + 1, ARRAY_SIZE(init) - 1);
++	if (rval)
++		return rval;
++
++	return s5kc505a_write(sensor, mode, ARRAY_SIZE(mode));
++}
++
++const struct ccs_quirk smiapp_s5kc505a_quirk = {
++	.limits = s5kc505a_limits,
++	.post_poweron = s5kc505a_post_poweron,
++};
+diff --git a/drivers/media/i2c/ccs/ccs-quirk.h b/drivers/media/i2c/ccs/ccs-quirk.h
+index 392c97109..7d7aaca45 100644
+--- a/drivers/media/i2c/ccs/ccs-quirk.h
++++ b/drivers/media/i2c/ccs/ccs-quirk.h
+@@ -75,5 +75,6 @@ extern const struct ccs_quirk smiapp_jt8ev1_quirk;
+ extern const struct ccs_quirk smiapp_imx125es_quirk;
+ extern const struct ccs_quirk smiapp_jt8ew9_quirk;
+ extern const struct ccs_quirk smiapp_tcm8500md_quirk;
++extern const struct ccs_quirk smiapp_s5kc505a_quirk;
+ 
+ #endif /* __CCS_QUIRK__ */
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
+index 9cf1ccdb2..b8bddf7b3 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
+@@ -128,6 +128,14 @@
+ #define VFE_0_BUS_BDG_QOS_CFG_6		0x2dc
+ #define VFE_0_BUS_BDG_QOS_CFG_7		0x2e0
+ #define VFE_0_BUS_BDG_QOS_CFG_7_CFG	0x0001aaa5
++#define VFE_0_BUS_BDG_QOS_CFG_8X53	0xaa55aa55
++
++/* MSM8953 ds-regs and ds-settings from the vendor device tree */
++#define VFE_0_DS_CFG(n)			(0x988 + 0x4 * (n))
++#define VFE_0_DS_CFG_NUM		16
++#define VFE_0_DS_CFG_8X53		0xcccc1111
++#define VFE_0_DS_CFG_LAST		0x9c8
++#define VFE_0_DS_CFG_LAST_8X53		0x110
+ 
+ #define VFE_0_RDI_CFG_x(x)		(0x2e8 + (0x4 * (x)))
+ #define VFE_0_RDI_CFG_x_RDI_STREAM_SEL_SHIFT	28
+@@ -210,13 +218,19 @@
+ 
+ #define MSM_VFE_VFE0_UB_SIZE 1023
+ #define MSM_VFE_VFE0_UB_SIZE_RDI (MSM_VFE_VFE0_UB_SIZE / 3)
++/* MSM8953 VFE0: 2048 UB words split in three, depth encoded as words - 1 */
++#define MSM_VFE_VFE0_UB_WORDS_8X53 2048
++#define MSM_VFE_VFE0_UB_SIZE_RDI_8X53 (MSM_VFE_VFE0_UB_WORDS_8X53 / 3 - 1)
+ 
+-static u16 vfe_get_ub_size(u8 vfe_id)
++static u16 vfe_get_ub_size(struct vfe_device *vfe)
+ {
+-	if (vfe_id == 0)
+-		return MSM_VFE_VFE0_UB_SIZE_RDI;
++	if (vfe->id != 0)
++		return 0;
++
++	if (vfe->camss->res->version == CAMSS_8x53)
++		return MSM_VFE_VFE0_UB_SIZE_RDI_8X53;
+ 
+-	return 0;
++	return MSM_VFE_VFE0_UB_SIZE_RDI;
+ }
+ 
+ static inline void vfe_reg_clr(struct vfe_device *vfe, u32 reg, u32 clr_bits)
+@@ -279,6 +293,29 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
+ 			1 << VFE_0_BUS_IMAGE_MASTER_n_WR_CFG_FRM_BASED_SHIFT);
+ }
+ 
++/* MSM8953 needs the buffer geometry in frame based mode as well */
++#define VFE_0_WR_BUFFER_CFG_MAX_HEIGHT	4096
++
++static void vfe_wm_frame_size(struct vfe_device *vfe, u8 wm,
++			      struct v4l2_pix_format_mplane *pix)
++{
++	u32 wpl = DIV_ROUND_UP(pix->plane_fmt[0].bytesperline, 8);
++	u32 reg;
++
++	if (vfe->camss->res->version != CAMSS_8x53)
++		return;
++
++	if (WARN_ON_ONCE(pix->height > VFE_0_WR_BUFFER_CFG_MAX_HEIGHT))
++		return;
++
++	reg = 0x3;
++	reg |= (pix->height - 1) << 4;
++	reg |= wpl << 16;
++
++	writel_relaxed(reg, vfe->base +
++		       VFE_0_BUS_IMAGE_MASTER_n_WR_BUFFER_CFG(wm));
++}
++
+ static void vfe_get_wm_sizes(struct v4l2_pix_format_mplane *pix, u8 plane,
+ 			     u16 *width, u16 *height, u16 *bytesperline)
+ {
+@@ -736,6 +773,11 @@ static void vfe_set_qos(struct vfe_device *vfe)
+ 	u32 val7 = VFE_0_BUS_BDG_QOS_CFG_7_CFG;
+ 	int ret;
+ 
++	if (vfe->camss->res->version == CAMSS_8x53) {
++		val = VFE_0_BUS_BDG_QOS_CFG_8X53;
++		val7 = VFE_0_BUS_BDG_QOS_CFG_8X53;
++	}
++
+ 	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_0);
+ 	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_1);
+ 	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_2);
+@@ -746,7 +788,7 @@ static void vfe_set_qos(struct vfe_device *vfe)
+ 	writel_relaxed(val7, vfe->base + VFE_0_BUS_BDG_QOS_CFG_7);
+ 
+ 	/* SoC-specific VBIF settings */
+-	if (vfe->res->has_vbif) {
++	if (vfe->vbif_base) {
+ 		ret = vfe_vbif_apply_settings(vfe);
+ 		if (ret < 0) {
+ 			dev_err_ratelimited(vfe->camss->dev,
+@@ -758,7 +800,14 @@ static void vfe_set_qos(struct vfe_device *vfe)
+ 
+ static void vfe_set_ds(struct vfe_device *vfe)
+ {
+-	/* empty */
++	int i;
++
++	if (vfe->camss->res->version != CAMSS_8x53)
++		return;
++
++	for (i = 0; i < VFE_0_DS_CFG_NUM; i++)
++		writel_relaxed(VFE_0_DS_CFG_8X53, vfe->base + VFE_0_DS_CFG(i));
++	writel_relaxed(VFE_0_DS_CFG_LAST_8X53, vfe->base + VFE_0_DS_CFG_LAST);
+ }
+ 
+ static void vfe_set_cgc_override(struct vfe_device *vfe, u8 wm, u8 enable)
+@@ -986,6 +1035,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
+ 	.set_xbar_cfg = vfe_set_xbar_cfg,
+ 	.wm_enable = vfe_wm_enable,
+ 	.wm_frame_based = vfe_wm_frame_based,
++	.wm_frame_size = vfe_wm_frame_size,
+ 	.wm_get_ping_pong_status = vfe_wm_get_ping_pong_status,
+ 	.wm_line_based = vfe_wm_line_based,
+ 	.wm_set_framedrop_pattern = vfe_wm_set_framedrop_pattern,
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-7.c b/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
+index 76729607d..2f1617396 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
+@@ -252,11 +252,11 @@
+ #define MSM_VFE_VFE1_UB_SIZE 1535
+ #define MSM_VFE_VFE1_UB_SIZE_RDI (MSM_VFE_VFE1_UB_SIZE / 3)
+ 
+-static u16 vfe_get_ub_size(u8 vfe_id)
++static u16 vfe_get_ub_size(struct vfe_device *vfe)
+ {
+-	if (vfe_id == 0)
++	if (vfe->id == 0)
+ 		return MSM_VFE_VFE0_UB_SIZE_RDI;
+-	else if (vfe_id == 1)
++	else if (vfe->id == 1)
+ 		return MSM_VFE_VFE1_UB_SIZE_RDI;
+ 
+ 	return 0;
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-8.c b/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
+index b2f7d855d..0887693b9 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
+@@ -1009,7 +1009,7 @@ static irqreturn_t vfe_isr(int irq, void *dev)
+ 	return IRQ_HANDLED;
+ }
+ 
+-static u16 vfe_get_ub_size(u8 vfe_id)
++static u16 vfe_get_ub_size(struct vfe_device *vfe)
+ {
+ 	/* On VFE4.8 the ub-size is the same on both instances */
+ 	return MSM_VFE_VFE0_UB_SIZE_RDI;
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
+index d84a375e3..aba79cf37 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
+@@ -176,7 +176,7 @@ static int vfe_enable_output(struct vfe_line *line)
+ 	unsigned int i;
+ 	u16 ub_size;
+ 
+-	ub_size = vfe->ops_gen1->get_ub_size(vfe->id);
++	ub_size = vfe->ops_gen1->get_ub_size(vfe);
+ 	if (!ub_size)
+ 		return -EINVAL;
+ 
+@@ -245,6 +245,9 @@ static int vfe_enable_output(struct vfe_line *line)
+ 		vfe->ops_gen1->wm_set_ub_cfg(vfe, output->wm_idx[0],
+ 					    (ub_size + 1) * output->wm_idx[0], ub_size);
+ 		vfe->ops_gen1->wm_frame_based(vfe, output->wm_idx[0], 1);
++		if (vfe->ops_gen1->wm_frame_size)
++			vfe->ops_gen1->wm_frame_size(vfe, output->wm_idx[0],
++						     &line->video_out.active_fmt.fmt.pix_mp);
+ 		vfe->ops_gen1->wm_enable(vfe, output->wm_idx[0], 1);
+ 		vfe->ops_gen1->bus_reload_wm(vfe, output->wm_idx[0]);
+ 	} else {
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
+index 6d5f96565..f6db0fc8f 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
++++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
+@@ -28,7 +28,7 @@ struct vfe_hw_ops_gen1 {
+ 				   u8 enable);
+ 	void (*enable_irq_pix_line)(struct vfe_device *vfe, u8 comp, enum vfe_line_id line_id,
+ 				    u8 enable);
+-	u16 (*get_ub_size)(u8 vfe_id);
++	u16 (*get_ub_size)(struct vfe_device *vfe);
+ 	void (*halt_clear)(struct vfe_device *vfe);
+ 	void (*halt_request)(struct vfe_device *vfe);
+ 	void (*set_camif_cfg)(struct vfe_device *vfe, struct vfe_line *line);
+@@ -45,6 +45,8 @@ struct vfe_hw_ops_gen1 {
+ 	void (*set_qos)(struct vfe_device *vfe);
+ 	void (*set_xbar_cfg)(struct vfe_device *vfe, struct vfe_output *output, u8 enable);
+ 	void (*wm_frame_based)(struct vfe_device *vfe, u8 wm, u8 enable);
++	void (*wm_frame_size)(struct vfe_device *vfe, u8 wm,
++			      struct v4l2_pix_format_mplane *pix);
+ 	void (*wm_line_based)(struct vfe_device *vfe, u32 wm, struct v4l2_pix_format_mplane *pix,
+ 			      u8 plane, u32 enable);
+ 	void (*wm_set_ub_cfg)(struct vfe_device *vfe, u8 wm, u16 offset, u16 depth);
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe-vbif.c b/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
+index 911f8da02..232c82dde 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
+@@ -17,6 +17,10 @@
+ #define VBIF_FIXED_SORT_EN	0x30
+ #define VBIF_FIXED_SORT_SEL0	0x34
+ 
++/* MSM8953: vbif-regs = <0x124>, vbif-settings = <0x3> in the vendor DT */
++#define VBIF_8X53_QOS_CFG	0x124
++#define VBIF_8X53_QOS_CFG_VAL	0x3
++
+ void vfe_vbif_write_reg(struct vfe_device *vfe, u32 reg, u32 val)
+ {
+ 	writel_relaxed(val, vfe->vbif_base + reg);
+@@ -24,8 +28,18 @@ void vfe_vbif_write_reg(struct vfe_device *vfe, u32 reg, u32 val)
+ 
+ int vfe_vbif_apply_settings(struct vfe_device *vfe)
+ {
+-	vfe_vbif_write_reg(vfe, VBIF_FIXED_SORT_EN, 0xfff);
+-	vfe_vbif_write_reg(vfe, VBIF_FIXED_SORT_SEL0, 0x555000);
++	switch (vfe->camss->res->version) {
++	case CAMSS_8x39:
++		vfe_vbif_write_reg(vfe, VBIF_FIXED_SORT_EN, 0xfff);
++		vfe_vbif_write_reg(vfe, VBIF_FIXED_SORT_SEL0, 0x555000);
++		break;
++	case CAMSS_8x53:
++		vfe_vbif_write_reg(vfe, VBIF_8X53_QOS_CFG,
++				   VBIF_8X53_QOS_CFG_VAL);
++		break;
++	default:
++		break;
++	}
+ 
+ 	return 0;
+ }
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe.c b/drivers/media/platform/qcom/camss/camss-vfe.c
+index 64518915e..c333439b7 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe.c
++++ b/drivers/media/platform/qcom/camss/camss-vfe.c
+@@ -1924,11 +1924,17 @@ int msm_vfe_subdev_init(struct camss *camss, struct vfe_device *vfe,
+ 	}
+ 
+ 	if (vfe->res->has_vbif) {
+-		vfe->vbif_base = devm_platform_ioremap_resource_byname(pdev,
+-								       vfe->res->vbif_name);
+-		if (IS_ERR(vfe->vbif_base)) {
+-			dev_err(dev, "could not map vbif memory\n");
+-			return PTR_ERR(vfe->vbif_base);
++		struct resource *vbif;
++
++		vbif = platform_get_resource_byname(pdev, IORESOURCE_MEM,
++						    vfe->res->vbif_name);
++		/* The VBIF region is optional in the MSM8953 binding */
++		if (vbif || camss->res->version != CAMSS_8x53) {
++			vfe->vbif_base = devm_ioremap_resource(dev, vbif);
++			if (IS_ERR(vfe->vbif_base)) {
++				dev_err(dev, "could not map vbif memory\n");
++				return PTR_ERR(vfe->vbif_base);
++			}
+ 		}
+ 	}
+ 
+diff --git a/drivers/media/platform/qcom/camss/camss-video.c b/drivers/media/platform/qcom/camss/camss-video.c
+index 831486e14..507ab09d9 100644
+--- a/drivers/media/platform/qcom/camss/camss-video.c
++++ b/drivers/media/platform/qcom/camss/camss-video.c
+@@ -275,6 +275,10 @@ static int video_start_streaming(struct vb2_queue *q, unsigned int count)
+ 		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
+ 		if (ret < 0 && ret != -ENOIOCTLCMD)
+ 			goto error;
++
++		/* stop at the sensor, it starts its own internal subdevs */
++		if (subdev->dev && subdev->dev != video->camss->dev)
++			break;
+ 	}
+ 
+ 	return 0;
+@@ -316,6 +320,9 @@ static void video_stop_streaming(struct vb2_queue *q)
+ 			dev_err(video->camss->dev, "Video pipeline stop failed: %d\n", ret);
+ 			return;
+ 		}
++
++		if (subdev->dev && subdev->dev != video->camss->dev)
++			break;
+ 	}
+ 
+ 	video_device_pipeline_stop(vdev);
+diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
+index eba1fa7a8..d7eaf779c 100644
+--- a/drivers/media/platform/qcom/camss/camss.c
++++ b/drivers/media/platform/qcom/camss/camss.c
+@@ -390,6 +390,59 @@ static const struct camss_subdev_resources ispif_res_8x53 = {
+ 	.interrupt = { "ispif" },
+ };
+ 
++static const struct camss_subdev_resources csiphy_res_8x53[] = {
++	/* CSIPHY0 */
++	{
++		.regulators = {},
++		.clock = { "top_ahb", "ispif_ahb", "ahb", "csiphy0_timer" },
++		.clock_rate = { { 0 },
++				{ 0 },
++				{ 0 },
++				{ 200000000, 266666667 } },
++		.reg = { "csiphy0", "csiphy0_clk_mux" },
++		.interrupt = { "csiphy0" },
++		.csiphy = {
++			.id = 0,
++			.hw_ops = &csiphy_ops_3ph_1_0,
++			.formats = &csiphy_formats_8x96
++		}
++	},
++
++	/* CSIPHY1 */
++	{
++		.regulators = {},
++		.clock = { "top_ahb", "ispif_ahb", "ahb", "csiphy1_timer" },
++		.clock_rate = { { 0 },
++				{ 0 },
++				{ 0 },
++				{ 200000000, 266666667 } },
++		.reg = { "csiphy1", "csiphy1_clk_mux" },
++		.interrupt = { "csiphy1" },
++		.csiphy = {
++			.id = 1,
++			.hw_ops = &csiphy_ops_3ph_1_0,
++			.formats = &csiphy_formats_8x96
++		}
++	},
++
++	/* CSIPHY2 */
++	{
++		.regulators = {},
++		.clock = { "top_ahb", "ispif_ahb", "ahb", "csiphy2_timer" },
++		.clock_rate = { { 0 },
++				{ 0 },
++				{ 0 },
++				{ 200000000, 266666667 } },
++		.reg = { "csiphy2", "csiphy2_clk_mux" },
++		.interrupt = { "csiphy2" },
++		.csiphy = {
++			.id = 2,
++			.hw_ops = &csiphy_ops_3ph_1_0,
++			.formats = &csiphy_formats_8x96
++		}
++	}
++};
++
+ static const struct camss_subdev_resources vfe_res_8x53[] = {
+ 	/* VFE0 */
+ 	{
+@@ -399,9 +452,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+ 		.clock_rate = { { 0 },
+ 				{ 0 },
+ 				{ 0 },
+-				{ 50000000, 100000000, 133330000,
+-				  160000000, 200000000, 266670000,
+-				  310000000, 400000000, 465000000 },
++				{ 266670000, 310000000, 400000000,
++				  465000000 },
+ 				{ 0 },
+ 				{ 0 },
+ 				{ 0 } },
+@@ -411,6 +463,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+ 			.line_num = 3,
+ 			.has_pd = true,
+ 			.pd_name = "vfe0",
++			.has_vbif = true,
++			.vbif_name = "vfe0_vbif",
+ 			.hw_ops = &vfe_ops_4_1,
+ 			.formats_rdi = &vfe_formats_rdi_8x16,
+ 			.formats_pix = &vfe_formats_pix_8x16
+@@ -425,9 +479,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+ 		.clock_rate = { { 0 },
+ 				{ 0 },
+ 				{ 0 },
+-				{ 50000000, 100000000, 133330000,
+-				  160000000, 200000000, 266670000,
+-				  310000000, 400000000, 465000000 },
++				{ 266670000, 310000000, 400000000,
++				  465000000 },
+ 				{ 0 },
+ 				{ 0 },
+ 				{ 0 } },
+@@ -437,6 +490,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+ 			.line_num = 3,
+ 			.has_pd = true,
+ 			.pd_name = "vfe1",
++			.has_vbif = true,
++			.vbif_name = "vfe1_vbif",
+ 			.hw_ops = &vfe_ops_4_1,
+ 			.formats_rdi = &vfe_formats_rdi_8x16,
+ 			.formats_pix = &vfe_formats_pix_8x16
+@@ -4271,24 +4326,50 @@ struct media_pad *camss_find_sensor_pad(struct media_entity *entity)
+ 	}
+ }
+ 
++/*
++ * The transmitter is the first subdev upstream that does not belong to camss.
++ * For a sensor made of several subdevs (e.g. ccs) this is the one connected
++ * to the CSIPHY, which owns the link frequency, not the sensor entity.
++ */
++static struct media_pad *camss_find_transmitter_pad(struct media_entity *entity)
++{
++	struct device *dev = media_entity_to_v4l2_subdev(entity)->dev;
++	struct media_pad *pad;
++
++	while (1) {
++		pad = &entity->pads[0];
++		if (!(pad->flags & MEDIA_PAD_FL_SINK))
++			return NULL;
++
++		pad = media_pad_remote_pad_first(pad);
++		if (!pad || !is_media_entity_v4l2_subdev(pad->entity))
++			return NULL;
++
++		entity = pad->entity;
++
++		if (media_entity_to_v4l2_subdev(entity)->dev != dev)
++			return pad;
++	}
++}
++
+ /**
+- * camss_get_link_freq - Get link frequency from sensor
++ * camss_get_link_freq - Get link frequency from the transmitter
+  * @entity: Media entity in the current pipeline
+  * @bpp: Number of bits per pixel for the current format
+- * @lanes: Number of lanes in the link to the sensor
++ * @lanes: Number of lanes in the link to the transmitter
+  *
+  * Return link frequency on success or a negative error code otherwise
+  */
+ s64 camss_get_link_freq(struct media_entity *entity, unsigned int bpp,
+ 			unsigned int lanes)
+ {
+-	struct media_pad *sensor_pad;
++	struct media_pad *pad;
+ 
+-	sensor_pad = camss_find_sensor_pad(entity);
+-	if (!sensor_pad)
++	pad = camss_find_transmitter_pad(entity);
++	if (!pad)
+ 		return -ENODEV;
+ 
+-	return v4l2_get_link_freq(sensor_pad, bpp, 2 * lanes);
++	return v4l2_get_link_freq(pad, bpp, 2 * lanes);
+ }
+ 
+ /*
+@@ -5102,11 +5183,11 @@ static const struct camss_resources sdm450_resources = {
+ 	.version = CAMSS_8x53,
+ 	.icc_res = icc_res_8x53,
+ 	.icc_path_num = ARRAY_SIZE(icc_res_8x53),
+-	.csiphy_res = csiphy_res_8x96,
++	.csiphy_res = csiphy_res_8x53,
+ 	.csid_res = csid_res_8x53,
+ 	.ispif_res = &ispif_res_8x53,
+ 	.vfe_res = vfe_res_8x53,
+-	.csiphy_num = ARRAY_SIZE(csiphy_res_8x96),
++	.csiphy_num = ARRAY_SIZE(csiphy_res_8x53),
+ 	.csid_num = MIN(2, ARRAY_SIZE(csid_res_8x53)),
+ 	.vfe_num = ARRAY_SIZE(vfe_res_8x53),
+ };
+@@ -5115,11 +5196,11 @@ static const struct camss_resources msm8953_resources = {
+ 	.version = CAMSS_8x53,
+ 	.icc_res = icc_res_8x53,
+ 	.icc_path_num = ARRAY_SIZE(icc_res_8x53),
+-	.csiphy_res = csiphy_res_8x96,
++	.csiphy_res = csiphy_res_8x53,
+ 	.csid_res = csid_res_8x53,
+ 	.ispif_res = &ispif_res_8x53,
+ 	.vfe_res = vfe_res_8x53,
+-	.csiphy_num = ARRAY_SIZE(csiphy_res_8x96),
++	.csiphy_num = ARRAY_SIZE(csiphy_res_8x53),
+ 	.csid_num = ARRAY_SIZE(csid_res_8x53),
+ 	.vfe_num = ARRAY_SIZE(vfe_res_8x53),
+ };
+diff --git a/drivers/media/platform/qcom/venus/core.h b/drivers/media/platform/qcom/venus/core.h
+index 7506f5d0f..73e32c4c0 100644
+--- a/drivers/media/platform/qcom/venus/core.h
++++ b/drivers/media/platform/qcom/venus/core.h
+@@ -446,6 +446,7 @@ enum venus_inst_modes {
+  * @bit_depth:		current bitstream bit-depth
+  * @pic_struct:		bitstream progressive vs interlaced
+  * @next_buf_last: a flag to mark next queued capture buffer as last
++ * @eos_last_pending: EOS came in a buffer still held by userspace
+  * @drain_active:	Drain sequence is in progress
+  * @flags:	bitmask flags describing current instance mode
+  * @dpb_ids:	DPB buffer ID's
+@@ -517,6 +518,7 @@ struct venus_inst {
+ 	unsigned int bit_depth;
+ 	unsigned int pic_struct;
+ 	bool next_buf_last;
++	bool eos_last_pending;
+ 	bool drain_active;
+ 	enum venus_inst_modes flags;
+ 	struct ida dpb_ids;
+diff --git a/drivers/media/platform/qcom/venus/hfi_parser.c b/drivers/media/platform/qcom/venus/hfi_parser.c
+index a1397765a..2598212f1 100644
+--- a/drivers/media/platform/qcom/venus/hfi_parser.c
++++ b/drivers/media/platform/qcom/venus/hfi_parser.c
+@@ -385,9 +385,16 @@ u32 hfi_parser(struct venus_core *core, struct venus_inst *inst, void *buf,
+ 			break;
+ 		}
+ 
+-		if (ret < 0 || rem_bytes < ret)
++		if (ret < 0)
+ 			return HFI_ERR_SYS_INSUFFICIENT_RESOURCES;
+ 
++		/* VE.4.2 firmware on MSM8953 truncates the last property */
++		if (rem_bytes < ret) {
++			dev_warn_once(core->dev, "Truncated property %x, ignoring the rest\n",
++				      property);
++			break;
++		}
++
+ 		words += ret / sizeof(u32);
+ 		rem_bytes -= ret;
+ 	}
+diff --git a/drivers/media/platform/qcom/venus/hfi_venus.c b/drivers/media/platform/qcom/venus/hfi_venus.c
+index bd82066bb..fe2e24c88 100644
+--- a/drivers/media/platform/qcom/venus/hfi_venus.c
++++ b/drivers/media/platform/qcom/venus/hfi_venus.c
+@@ -10,6 +10,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/iopoll.h>
+ #include <linux/kernel.h>
++#include <linux/of.h>
+ #include <linux/slab.h>
+ 
+ #include "core.h"
+@@ -132,6 +133,8 @@ struct venus_hfi_device {
+ static bool venus_pkt_debug;
+ int venus_fw_debug = HFI_DEBUG_MSG_ERROR | HFI_DEBUG_MSG_FATAL;
+ static bool venus_fw_low_power_mode = true;
++module_param_named(fw_debug, venus_fw_debug, int, 0644);
++MODULE_PARM_DESC(fw_debug, "Firmware debug message levels, applied at core init");
+ static int venus_hw_rsp_timeout = 1000;
+ static bool venus_fw_coverage;
+ 
+@@ -960,10 +963,13 @@ static int venus_sys_set_default_properties(struct venus_hfi_device *hdev)
+ 			dev_warn(dev, "setting idle response ON failed (%d)\n", ret);
+ 	}
+ 
+-	ret = venus_sys_set_power_control(hdev, venus_fw_low_power_mode);
+-	if (ret)
+-		dev_warn(dev, "setting hw power collapse ON failed (%d)\n",
+-			 ret);
++	/* MSM8953 only supports software power collapse */
++	if (!of_device_is_compatible(dev->of_node, "qcom,msm8953-venus")) {
++		ret = venus_sys_set_power_control(hdev, venus_fw_low_power_mode);
++		if (ret)
++			dev_warn(dev, "setting hw power collapse ON failed (%d)\n",
++				 ret);
++	}
+ 
+ 	/* For specific venus core, it is mandatory to set the UBWC configuration */
+ 	if (res->ubwc_conf) {
+diff --git a/drivers/media/platform/qcom/venus/pm_helpers.c b/drivers/media/platform/qcom/venus/pm_helpers.c
+index f0269524a..e0271461f 100644
+--- a/drivers/media/platform/qcom/venus/pm_helpers.c
++++ b/drivers/media/platform/qcom/venus/pm_helpers.c
+@@ -8,6 +8,7 @@
+ #include <linux/interconnect.h>
+ #include <linux/iopoll.h>
+ #include <linux/kernel.h>
++#include <linux/of.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_opp.h>
+ #include <linux/pm_runtime.h>
+@@ -345,6 +346,10 @@ vcodec_control_v3(struct venus_core *core, u32 session_type, bool enable)
+ 	else
+ 		ctrl = core->wrapper_base + WRAPPER_VENC_VCODEC_POWER_CONTROL;
+ 
++	/* MSM8953 only supports software power collapse */
++	if (of_device_is_compatible(core->dev->of_node, "qcom,msm8953-venus"))
++		enable = true;
++
+ 	if (enable)
+ 		writel(0, ctrl);
+ 	else
+diff --git a/drivers/media/platform/qcom/venus/vdec.c b/drivers/media/platform/qcom/venus/vdec.c
+index 7a3247dcb..7e1ecdbba 100644
+--- a/drivers/media/platform/qcom/venus/vdec.c
++++ b/drivers/media/platform/qcom/venus/vdec.c
+@@ -545,6 +545,8 @@ static int vdec_subscribe_event(struct v4l2_fh *fh,
+ 	}
+ }
+ 
++static int vdec_pm_get_put(struct venus_inst *inst);
++
+ static int
+ vdec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cmd)
+ {
+@@ -557,6 +559,11 @@ vdec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cmd)
+ 	if (ret)
+ 		return ret;
+ 
++	/* sending a command with the vcodec clocks off hangs the SoC */
++	ret = vdec_pm_get_put(inst);
++	if (ret)
++		return ret;
++
+ 	mutex_lock(&inst->lock);
+ 
+ 	if (cmd->cmd == V4L2_DEC_CMD_STOP) {
+@@ -1076,6 +1083,7 @@ static int vdec_start_capture(struct venus_inst *inst)
+ 	venus_pm_load_scale(inst);
+ 
+ 	inst->next_buf_last = false;
++	inst->eos_last_pending = false;
+ 
+ 	ret = venus_helper_alloc_dpb_bufs(inst);
+ 	if (ret)
+@@ -1147,6 +1155,7 @@ static int vdec_start_output(struct venus_inst *inst)
+ 	inst->sequence_out = 0;
+ 	inst->reconfig = false;
+ 	inst->next_buf_last = false;
++	inst->eos_last_pending = false;
+ 
+ 	ret = vdec_set_properties(inst);
+ 	if (ret)
+@@ -1383,8 +1392,10 @@ static void vdec_vb2_buf_queue(struct vb2_buffer *vb)
+ 
+ 	mutex_lock(&inst->lock);
+ 
+-	if (inst->next_buf_last && V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
+-	    inst->codec_state == VENUS_DEC_STATE_DRC) {
++	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
++	    ((inst->next_buf_last && inst->codec_state == VENUS_DEC_STATE_DRC) ||
++	     (inst->eos_last_pending &&
++	      inst->codec_state == VENUS_DEC_STATE_STOPPED))) {
+ 		vbuf->flags |= V4L2_BUF_FLAG_LAST;
+ 		vbuf->sequence = inst->sequence_cap++;
+ 		vbuf->field = V4L2_FIELD_NONE;
+@@ -1392,6 +1403,7 @@ static void vdec_vb2_buf_queue(struct vb2_buffer *vb)
+ 		v4l2_m2m_buf_done(vbuf, VB2_BUF_STATE_DONE);
+ 		v4l2_event_queue_fh(&inst->fh, &eos);
+ 		inst->next_buf_last = false;
++		inst->eos_last_pending = false;
+ 		mutex_unlock(&inst->lock);
+ 		return;
+ 	}
+@@ -1429,6 +1441,15 @@ static void vdec_buf_done(struct venus_inst *inst, unsigned int buf_type,
+ 	vbuf = venus_helper_find_buf(inst, type, tag);
+ 	if (!vbuf) {
+ 		venus_helper_change_dpb_owner(inst, vbuf, type, buf_type, tag);
++		/* EOS in a buffer still held by userspace: flag the next one */
++		if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
++		    (flags & V4L2_BUF_FLAG_LAST) && inst->streamon_cap &&
++		    inst->sequence_cap &&
++		    inst->codec_state == VENUS_DEC_STATE_DRAIN) {
++			inst->drain_active = false;
++			inst->codec_state = VENUS_DEC_STATE_STOPPED;
++			inst->eos_last_pending = true;
++		}
+ 		return;
+ 	}
+ 
+diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
+index efcec720d..3144322d7 100644
+--- a/drivers/media/platform/qcom/venus/venc.c
++++ b/drivers/media/platform/qcom/venus/venc.c
+@@ -473,6 +473,7 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
+ 	struct venus_inst *inst = to_inst(file);
+ 	const struct venus_format *fmt;
+ 	unsigned int framerate_factor = 1;
++	u32 fmin, fmax;
+ 
+ 	fival->type = V4L2_FRMIVAL_TYPE_STEPWISE;
+ 
+@@ -502,12 +503,20 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
+ 		framerate_factor = (1 << 16);
+ 	}
+ 
++	/* some firmware reports no frame rate range for the encoder */
++	fmin = frate_min(inst) / framerate_factor;
++	fmax = frate_max(inst) / framerate_factor;
++	if (!fmin || !fmax) {
++		fmin = 1;
++		fmax = 120;
++	}
++
+ 	fival->stepwise.min.numerator = 1;
+-	fival->stepwise.min.denominator = frate_max(inst) / framerate_factor;
++	fival->stepwise.min.denominator = fmax;
+ 	fival->stepwise.max.numerator = 1;
+-	fival->stepwise.max.denominator = frate_min(inst) / framerate_factor;
++	fival->stepwise.max.denominator = fmin;
+ 	fival->stepwise.step.numerator = 1;
+-	fival->stepwise.step.denominator = frate_max(inst) / framerate_factor;
++	fival->stepwise.step.denominator = fmax;
+ 
+ 	return 0;
+ }
+@@ -691,6 +700,16 @@ static int venc_set_properties(struct venus_inst *inst)
+ 	if (ret)
+ 		return ret;
+ 
++	/* base rate control on the frame rate, not on buffer timestamps */
++	if (IS_V3(inst->core)) {
++		en.enable = 1;
++		ret = hfi_session_set_property(inst,
++					       HFI_PROPERTY_PARAM_VENC_DISABLE_RC_TIMESTAMP,
++					       &en);
++		if (ret)
++			return ret;
++	}
++
+ 	if (inst->fmt_cap->pixfmt == V4L2_PIX_FMT_H264) {
+ 		struct hfi_h264_vui_timing_info info;
+ 		struct hfi_h264_entropy_control entropy;
+@@ -946,13 +965,16 @@ static int venc_set_properties(struct venus_inst *inst)
+ 	if (ret)
+ 		return ret;
+ 
+-	ptype = HFI_PROPERTY_PARAM_VENC_LTRMODE;
+-	ltr_mode.ltr_count = ctr->ltr_count;
+-	ltr_mode.ltr_mode = HFI_LTR_MODE_MANUAL;
+-	ltr_mode.trust_mode = 1;
+-	ret = hfi_session_set_property(inst, ptype, &ltr_mode);
+-	if (ret)
+-		return ret;
++	/* manual LTR mode without LTR frames hangs Venus 3.x */
++	if (ctr->ltr_count) {
++		ptype = HFI_PROPERTY_PARAM_VENC_LTRMODE;
++		ltr_mode.ltr_count = ctr->ltr_count;
++		ltr_mode.ltr_mode = HFI_LTR_MODE_MANUAL;
++		ltr_mode.trust_mode = 1;
++		ret = hfi_session_set_property(inst, ptype, &ltr_mode);
++		if (ret)
++			return ret;
++	}
+ 
+ 	switch (inst->hfi_codec) {
+ 	case HFI_VIDEO_CODEC_H264:
+@@ -1159,7 +1181,8 @@ static int venc_queue_setup(struct vb2_queue *q,
+ 		break;
+ 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+ 		*num_planes = inst->fmt_cap->num_planes;
+-		*num_buffers = max(*num_buffers, min);
++		/* buffers added after REQBUFS are rejected; allocate headroom */
++		*num_buffers = max(*num_buffers, 2 * min);
+ 		inst->num_output_bufs = *num_buffers;
+ 		sizes[0] = venus_helper_get_framesz(inst->fmt_cap->pixfmt,
+ 						    inst->width,
+diff --git a/drivers/mmc/core/sdio_bus.c b/drivers/mmc/core/sdio_bus.c
+index 4b07098c3..d7234532c 100644
+--- a/drivers/mmc/core/sdio_bus.c
++++ b/drivers/mmc/core/sdio_bus.c
+@@ -155,15 +155,17 @@ static int sdio_bus_probe(struct device *dev)
+ 	struct sdio_driver *drv = to_sdio_driver(dev->driver);
+ 	struct sdio_func *func = dev_to_sdio_func(dev);
+ 	const struct sdio_device_id *id;
++	const char *stage;
+ 	int ret;
+ 
+ 	id = sdio_match_device(func, drv);
+ 	if (!id)
+ 		return -ENODEV;
+ 
++	stage = "attaching PM domain";
+ 	ret = dev_pm_domain_attach(dev, 0);
+ 	if (ret)
+-		return ret;
++		goto report_error;
+ 
+ 	atomic_inc(&func->card->sdio_funcs_probed);
+ 
+@@ -174,6 +176,7 @@ static int sdio_bus_probe(struct device *dev)
+ 	 * pm_runtime_get_noresume() in its remove routine.
+ 	 */
+ 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD) {
++		stage = "resuming SDIO function";
+ 		ret = pm_runtime_get_sync(dev);
+ 		if (ret < 0)
+ 			goto disable_runtimepm;
+@@ -181,6 +184,7 @@ static int sdio_bus_probe(struct device *dev)
+ 
+ 	/* Set the default block size so the driver is sure it's something
+ 	 * sensible. */
++	stage = "setting default block size";
+ 	sdio_claim_host(func);
+ 	if (mmc_card_removed(func->card))
+ 		ret = -ENOMEDIUM;
+@@ -190,6 +194,7 @@ static int sdio_bus_probe(struct device *dev)
+ 	if (ret)
+ 		goto disable_runtimepm;
+ 
++	stage = "probing function driver";
+ 	ret = drv->probe(func, id);
+ 	if (ret)
+ 		goto disable_runtimepm;
+@@ -200,6 +205,9 @@ static int sdio_bus_probe(struct device *dev)
+ 	atomic_dec(&func->card->sdio_funcs_probed);
+ 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD)
+ 		pm_runtime_put_noidle(dev);
++report_error:
++	if (ret == -ETIMEDOUT)
++		dev_err(dev, "timed out while %s\n", stage);
+ 	return ret;
+ }
+ 
+diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
+index 2c4d8f6cc..5909a0ed1 100644
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -2223,7 +2223,7 @@ config SND_SOC_TAS5720
+ 	  Class-D audio power amplifiers.
+ 
+ config SND_SOC_TAS5805M
+-	tristate "Texas Instruments TAS5805M speaker amplifier"
++	tristate "Texas Instruments TAS5782M/5805M speaker amplifier"
+ 	depends on I2C
+ 	help
+ 	  Enable support for Texas Instruments TAS5805M Class-D
+diff --git a/sound/soc/codecs/tas5805m.c b/sound/soc/codecs/tas5805m.c
+index 867046b7a..0e18a86e8 100644
+--- a/sound/soc/codecs/tas5805m.c
++++ b/sound/soc/codecs/tas5805m.c
+@@ -4,6 +4,7 @@
+ //
+ // Author: Andy Liu <andy-liu@ti.com>
+ // Author: Daniel Beer <daniel.beer@igorinstitute.com>
++// Author: Felix Kaechele <felix@kaechele.ca> - TAS5782M support
+ //
+ // This is based on a driver originally written by Andy Liu at TI and
+ // posted here:
+@@ -58,6 +59,23 @@
+ #define DCTRL2_MUTE		0x08
+ #define DCTRL2_DIS_DSP		0x10
+ 
++/* TAS5782M (Lenovo ThinkSmart View); the datasheet numbers registers without names */
++#define TAS5782M_REG_RESET		0x01
++#define TAS5782M_REG_POWER		0x02
++#define TAS5782M_REG_MUTE		0x03
++#define TAS5782M_REG_PLL_REF		0x0d
++#define TAS5782M_REG_ERR_DETECT		0x25
++#define TAS5782M_REG_DAC_ROUTING	0x2a
++
++#define TAS5782M_RESET_REGISTERS	0x01
++#define TAS5782M_RESET_MODULES		0x10
++#define TAS5782M_POWER_ON		0x00
++#define TAS5782M_POWER_DOWN		0x01
++#define TAS5782M_POWER_STANDBY		0x10
++#define TAS5782M_MUTE_LR		0x11
++#define TAS5782M_PLL_REF_SCLK		0x10
++#define TAS5782M_IGNORE_MCLK		0x18	/* ignore MCLK detection and MCLK halt */
++
+ /* This sequence of register writes must always be sent, prior to the
+  * 5ms delay while we wait for the DSP to boot.
+  */
+@@ -67,6 +85,43 @@ static const uint8_t dsp_cfg_preboot[] = {
+ 	0x00, 0x00, 0x7f, 0x00, 0x03, 0x02,
+ };
+ 
++static const u8 tas5782m_preboot[] = {
++	REG_PAGE, 0x00,
++	REG_BOOK, 0x00,
++	TAS5782M_REG_POWER, TAS5782M_POWER_DOWN | TAS5782M_POWER_STANDBY,
++	TAS5782M_REG_RESET, TAS5782M_RESET_REGISTERS | TAS5782M_RESET_MODULES,
++	0x00, 0x00,
++	0x00, 0x00,
++	0x00, 0x00,
++	0x00, 0x00,
++	TAS5782M_REG_MUTE, TAS5782M_MUTE_LR,
++	TAS5782M_REG_DAC_ROUTING, 0x00,		/* DAC data path muted */
++	TAS5782M_REG_ERR_DETECT, TAS5782M_IGNORE_MCLK,
++	TAS5782M_REG_PLL_REF, TAS5782M_PLL_REF_SCLK,
++	TAS5782M_REG_POWER, TAS5782M_POWER_ON,
++};
++
++struct tas5805m_chip {
++	bool is_tas5782m;
++	const char *fw_prefix;
++	const u8 *preboot;
++	unsigned int preboot_len;
++};
++
++static const struct tas5805m_chip tas5805m_chip = {
++	.fw_prefix = "tas5805m",
++	.preboot = dsp_cfg_preboot,
++	.preboot_len = ARRAY_SIZE(dsp_cfg_preboot),
++};
++
++static const struct tas5805m_chip tas5782m_chip = {
++	.is_tas5782m = true,
++	/* sic: this is the file name in postmarketOS firmware-qcom-msm8953 */
++	.fw_prefix = "tas5728m",
++	.preboot = tas5782m_preboot,
++	.preboot_len = ARRAY_SIZE(tas5782m_preboot),
++};
++
+ static const uint32_t tas5805m_volume[] = {
+ 	0x0000001B, /*   0, -110dB */ 0x0000001E, /*   1, -109dB */
+ 	0x00000021, /*   2, -108dB */ 0x00000025, /*   3, -107dB */
+@@ -154,6 +209,7 @@ static const uint32_t tas5805m_volume[] = {
+ #define TAS5805M_VOLUME_MIN	0
+ 
+ struct tas5805m_priv {
++	const struct tas5805m_chip	*chip;
+ 	struct i2c_client		*i2c;
+ 	struct regulator		*pvdd;
+ 	struct gpio_desc		*gpio_pdn_n;
+@@ -207,9 +263,13 @@ static void tas5805m_refresh(struct tas5805m_priv *tas5805m)
+ 	regmap_write(rm, REG_BOOK, 0x00);
+ 
+ 	/* Set/clear digital soft-mute */
+-	regmap_write(rm, REG_DEVICE_CTRL_2,
+-		(tas5805m->is_muted ? DCTRL2_MUTE : 0) |
+-		DCTRL2_MODE_PLAY);
++	if (tas5805m->chip->is_tas5782m)
++		regmap_write(rm, TAS5782M_REG_MUTE,
++			     tas5805m->is_muted ? TAS5782M_MUTE_LR : 0);
++	else
++		regmap_write(rm, REG_DEVICE_CTRL_2,
++			     (tas5805m->is_muted ? DCTRL2_MUTE : 0) |
++			     DCTRL2_MODE_PLAY);
+ }
+ 
+ static int tas5805m_vol_info(struct snd_kcontrol *kcontrol,
+@@ -339,7 +399,7 @@ static void do_work(struct work_struct *work)
+ 	 * allow the DSP to boot before configuring it.
+ 	 */
+ 	usleep_range(5000, 10000);
+-	send_cfg(rm, dsp_cfg_preboot, ARRAY_SIZE(dsp_cfg_preboot));
++	send_cfg(rm, tas5805m->chip->preboot, tas5805m->chip->preboot_len);
+ 	usleep_range(5000, 15000);
+ 	send_cfg(rm, tas5805m->dsp_cfg_data, tas5805m->dsp_cfg_len);
+ 
+@@ -369,6 +429,13 @@ static int tas5805m_dac_event(struct snd_soc_dapm_widget *w,
+ 			regmap_write(rm, REG_PAGE, 0x00);
+ 			regmap_write(rm, REG_BOOK, 0x00);
+ 
++			/* TAS5782M fault registers are not documented */
++			if (tas5805m->chip->is_tas5782m) {
++				regmap_write(rm, TAS5782M_REG_POWER,
++					     TAS5782M_POWER_STANDBY);
++				goto unlock;
++			}
++
+ 			regmap_read(rm, REG_CHAN_FAULT, &chan);
+ 			regmap_read(rm, REG_GLOBAL_FAULT1, &global1);
+ 			regmap_read(rm, REG_GLOBAL_FAULT2, &global2);
+@@ -379,6 +446,7 @@ static int tas5805m_dac_event(struct snd_soc_dapm_widget *w,
+ 
+ 			regmap_write(rm, REG_DEVICE_CTRL_2, DCTRL2_MODE_HIZ);
+ 		}
++unlock:
+ 		mutex_unlock(&tas5805m->lock);
+ 	}
+ 
+@@ -476,6 +544,10 @@ static int tas5805m_i2c_probe(struct i2c_client *i2c)
+ 	if (!tas5805m)
+ 		return -ENOMEM;
+ 
++	tas5805m->chip = i2c_get_match_data(i2c);
++	if (!tas5805m->chip)
++		return -ENODEV;
++
+ 	tas5805m->i2c = i2c;
+ 	tas5805m->pvdd = devm_regulator_get(dev, "pvdd");
+ 	if (IS_ERR(tas5805m->pvdd)) {
+@@ -505,8 +577,8 @@ static int tas5805m_i2c_probe(struct i2c_client *i2c)
+ 					&config_name))
+ 		config_name = "default";
+ 
+-	snprintf(filename, sizeof(filename), "tas5805m_dsp_%s.bin",
+-		 config_name);
++	snprintf(filename, sizeof(filename), "%s_dsp_%s.bin",
++		 tas5805m->chip->fw_prefix, config_name);
+ 	ret = request_firmware(&fw, filename, dev);
+ 	if (ret)
+ 		return ret;
+@@ -580,14 +652,16 @@ static void tas5805m_i2c_remove(struct i2c_client *i2c)
+ }
+ 
+ static const struct i2c_device_id tas5805m_i2c_id[] = {
+-	{ "tas5805m", },
++	{ "tas5805m", (kernel_ulong_t)&tas5805m_chip },
++	{ "tas5782m", (kernel_ulong_t)&tas5782m_chip },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(i2c, tas5805m_i2c_id);
+ 
+ #if IS_ENABLED(CONFIG_OF)
+ static const struct of_device_id tas5805m_of_match[] = {
+-	{ .compatible = "ti,tas5805m", },
++	{ .compatible = "ti,tas5805m", .data = &tas5805m_chip },
++	{ .compatible = "ti,tas5782m", .data = &tas5782m_chip },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, tas5805m_of_match);
+@@ -607,5 +681,5 @@ module_i2c_driver(tas5805m_i2c_driver);
+ 
+ MODULE_AUTHOR("Andy Liu <andy-liu@ti.com>");
+ MODULE_AUTHOR("Daniel Beer <daniel.beer@igorinstitute.com>");
+-MODULE_DESCRIPTION("TAS5805M Audio Amplifier Driver");
++MODULE_DESCRIPTION("TAS5782M/TAS5805M Audio Amplifier Driver");
+ MODULE_LICENSE("GPL v2");
+diff --git a/sound/soc/qcom/qdsp6/q6afe-dai.c b/sound/soc/qcom/qdsp6/q6afe-dai.c
+index 0f47aadaa..d00f8126e 100644
+--- a/sound/soc/qcom/qdsp6/q6afe-dai.c
++++ b/sound/soc/qcom/qdsp6/q6afe-dai.c
+@@ -373,6 +373,7 @@ static void q6afe_dai_shutdown(struct snd_pcm_substream *substream,
+ 	struct q6afe_dai_data *dai_data = dev_get_drvdata(dai->dev);
+ 	int rc;
+ 
++	dev_dbg(dai->dev, "AFE shutdown %s started=%d\n", dai->name, dai_data->is_port_started[dai->id]);
+ 	if (!dai_data->is_port_started[dai->id])
+ 		return;
+ 
+@@ -390,6 +391,7 @@ static int q6afe_dai_prepare(struct snd_pcm_substream *substream,
+ 	struct q6afe_dai_data *dai_data = dev_get_drvdata(dai->dev);
+ 	int rc;
+ 
++	dev_dbg(dai->dev, "AFE prepare %s started=%d\n", dai->name, dai_data->is_port_started[dai->id]);
+ 	if (dai_data->is_port_started[dai->id]) {
+ 		/* stop the port and restart with new port config */
+ 		rc = q6afe_port_stop(dai_data->port[dai->id]);
+diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
+index 9e3d176f5..ee0db3bab 100644
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -71,6 +71,9 @@ struct q6asm_dai_rtd {
+ 	uint32_t stream_id;
+ 	uint16_t session_id;
+ 	enum stream_state state;
++	bool pcm_mapped;
++	bool pcm_open;
++	bool pcm_routed;
+ 	uint32_t initial_samples_drop;
+ 	uint32_t trailing_samples_drop;
+ 	bool notify_on_drain;
+@@ -203,6 +206,33 @@ static void event_handler(uint32_t opcode, uint32_t token,
+ 	}
+ }
+ 
++/* STOP/EOS stops data transfer but leaves the ASM stream open. */
++static int q6asm_pcm_teardown(struct snd_pcm_substream *substream)
++{
++	struct q6asm_dai_rtd *prtd = substream->runtime->private_data;
++	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
++	int ret;
++
++	if (prtd->pcm_open) {
++		prtd->state = Q6ASM_STREAM_STOPPED;
++		ret = q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
++		if (ret < 0)
++			return ret;
++		prtd->pcm_open = false;
++	}
++	if (prtd->pcm_routed) {
++		q6routing_stream_close(rtd->dai_link->id, substream->stream);
++		prtd->pcm_routed = false;
++	}
++	if (prtd->pcm_mapped) {
++		ret = q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
++		if (ret < 0)
++			return ret;
++		prtd->pcm_mapped = false;
++	}
++	return 0;
++}
++
+ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 			     struct snd_pcm_substream *substream)
+ {
+@@ -224,16 +254,9 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	}
+ 
+ 	prtd->pcm_count = snd_pcm_lib_period_bytes(substream);
+-	/* rate and channels are sent to audio driver */
+-	if (prtd->state == Q6ASM_STREAM_RUNNING) {
+-		/* clear the previous setup if any  */
+-		q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
+-		q6asm_unmap_memory_regions(substream->stream,
+-					   prtd->audio_client);
+-		q6routing_stream_close(soc_prtd->dai_link->id,
+-					 substream->stream);
+-		prtd->state = Q6ASM_STREAM_STOPPED;
+-	}
++	ret = q6asm_pcm_teardown(substream);
++	if (ret < 0)
++		return ret;
+ 
+ 	ret = q6asm_map_memory_regions(substream->stream, prtd->audio_client,
+ 				       prtd->phys,
+@@ -243,8 +266,9 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	if (ret < 0) {
+ 		dev_err(dev, "Audio Start: Buffer Allocation failed rc = %d\n",
+ 							ret);
+-		return -ENOMEM;
++		return ret;
+ 	}
++	prtd->pcm_mapped = true;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		ret = q6asm_open_write(prtd->audio_client, prtd->stream_id,
+@@ -257,17 +281,21 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	}
+ 
+ 	if (ret < 0) {
+-		dev_err(dev, "%s: q6asm_open_write failed\n", __func__);
+-		goto open_err;
++		dev_err(dev, "PCM %s open failed: %d\n",
++			substream->stream == SNDRV_PCM_STREAM_PLAYBACK ?
++			"playback" : "capture", ret);
++		goto teardown;
+ 	}
+ 
++	prtd->pcm_open = true;
+ 	prtd->session_id = q6asm_get_session_id(prtd->audio_client);
+ 	ret = q6routing_stream_open(soc_prtd->dai_link->id, LEGACY_PCM_MODE,
+ 			      prtd->session_id, substream->stream);
+ 	if (ret) {
+ 		dev_err(dev, "%s: stream reg failed ret:%d\n", __func__, ret);
+-		goto routing_err;
++		goto teardown;
+ 	}
++	prtd->pcm_routed = true;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		ret = q6asm_media_format_block_multi_ch_pcm(
+@@ -280,26 +308,25 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 							   runtime->rate,
+ 							   runtime->channels,
+ 							   prtd->bits_per_sample);
+-
+-		/* Queue the buffers */
+-		for (i = 0; i < runtime->periods; i++)
+-			q6asm_read(prtd->audio_client, prtd->stream_id);
+-
+ 	}
+-	if (ret < 0)
+-		dev_info(dev, "%s: CMD Format block failed\n", __func__);
+-	else
+-		prtd->state = Q6ASM_STREAM_RUNNING;
+-
+-	return ret;
++	if (ret < 0) {
++		dev_err(dev, "PCM format block failed: %d\n", ret);
++		goto teardown;
++	}
+ 
+-routing_err:
+-	q6asm_cmd(prtd->audio_client, prtd->stream_id,  CMD_CLOSE);
+-open_err:
+-	q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
+-	q6asm_audio_client_free(prtd->audio_client);
+-	prtd->audio_client = NULL;
++	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
++		for (i = 0; i < runtime->periods; i++) {
++			ret = q6asm_read(prtd->audio_client, prtd->stream_id);
++			if (ret < 0)
++				goto teardown;
++		}
++	}
++	prtd->state = Q6ASM_STREAM_RUNNING;
++	return 0;
+ 
++teardown:
++	if (q6asm_pcm_teardown(substream) < 0)
++		dev_err(dev, "PCM setup cleanup failed\n");
+ 	return ret;
+ }
+ 
+@@ -455,19 +482,17 @@ static int q6asm_dai_close(struct snd_soc_component *component,
+ 	struct snd_pcm_runtime *runtime = substream->runtime;
+ 	struct snd_soc_pcm_runtime *soc_prtd = snd_soc_substream_to_rtd(substream);
+ 	struct q6asm_dai_rtd *prtd = runtime->private_data;
++	int ret;
+ 
+-	if (prtd->audio_client) {
+-		if (prtd->state)
+-			q6asm_cmd(prtd->audio_client, prtd->stream_id,
+-				  CMD_CLOSE);
+-
+-		q6asm_unmap_memory_regions(substream->stream,
+-					   prtd->audio_client);
+-		q6asm_audio_client_free(prtd->audio_client);
+-		prtd->audio_client = NULL;
++	ret = q6asm_pcm_teardown(substream);
++	if (ret < 0) {
++		dev_err(component->dev, "PCM final teardown failed: %d\n", ret);
++		if (prtd->pcm_open && prtd->pcm_mapped)
++			q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
++		if (prtd->pcm_routed)
++			q6routing_stream_close(soc_prtd->dai_link->id, substream->stream);
+ 	}
+-	q6routing_stream_close(soc_prtd->dai_link->id,
+-						substream->stream);
++	q6asm_audio_client_free(prtd->audio_client);
+ 	kfree(prtd);
+ 	return 0;
+ }
+diff --git a/sound/soc/qcom/qdsp6/q6asm.c b/sound/soc/qcom/qdsp6/q6asm.c
+index de0bd8fd0..fb240d3cd 100644
+--- a/sound/soc/qcom/qdsp6/q6asm.c
++++ b/sound/soc/qcom/qdsp6/q6asm.c
+@@ -524,6 +524,9 @@ int q6asm_map_memory_regions(unsigned int dir, struct audio_client *ac,
+ 			buf[cnt].size = period_sz;
+ 		}
+ 	}
++	/* A new ring may have fewer periods than the previous mapping. */
++	ac->port[dir].dsp_buf = 0;
++	atomic_set(&ac->port[dir].hw_ptr, 0);
+ 	ac->port[dir].num_periods = periods;
+ 
+ 	spin_unlock_irqrestore(&ac->lock, flags);
+@@ -884,6 +887,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
+ 	ac->result.opcode = 0;
+ 	ac->result.status = 0;
+ 
++	dev_dbg(ac->dev, "ASM send port=%#x op=%#x\n", hdr->dest_port, hdr->opcode);
+ 	rc = apr_send_pkt(ac->adev, pkt);
+ 	if (rc < 0)
+ 		goto err;
+@@ -906,6 +910,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
+ 
+ 
+ err:
++	dev_dbg(ac->dev, "ASM done port=%#x op=%#x rc=%d\n", hdr->dest_port, hdr->opcode, rc);
+ 	mutex_unlock(&ac->cmd_lock);
+ 	return rc;
+ }
+diff --git a/sound/soc/qcom/qdsp6/q6routing.c b/sound/soc/qcom/qdsp6/q6routing.c
+index 738622604..bed7b9554 100644
+--- a/sound/soc/qcom/qdsp6/q6routing.c
++++ b/sound/soc/qcom/qdsp6/q6routing.c
+@@ -373,6 +373,9 @@ int q6routing_stream_open(int fedai_id, int perf_mode,
+ 	}
+ 
+ 	session = &routing_data->sessions[stream_id - 1];
++	dev_dbg(routing_data->dev,
++		"route open fe=%d session=%d dir=%d port=%d\n",
++		fedai_id, stream_id, stream_type, session->port_id);
+ 	if (session->port_id < 0) {
+ 		dev_err(routing_data->dev, "Routing not setup for MultiMedia%d Session\n",
+ 			session->fedai_id);

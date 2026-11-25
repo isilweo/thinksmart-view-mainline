@@ -1,4 +1,4 @@
-# Installing postmarketOS with these patches on a ThinkSmart View
+# Installing postmarketOS on a ThinkSmart View
 
 This is the path we used on five CD-18781Y units, from the stock Teams
 firmware (Android 8.1) to postmarketOS v26.06 with systemd and the patched
@@ -51,26 +51,34 @@ anything. On our units EDL was always reachable with the buttons.
 
 pmbootstrap (git main) with pmaports branch `v26.06`.
 
-1. Patch the kernel package
-   `device/community/linux-postmarketos-qcom-msm8953`:
-   - copy `kernel/series/*.patch` and `kernel/third-party/tas5782m-support.diff`
-     into the package directory and add them to `source=`;
-   - add the options from `kernel/config.fragment` to
-     `config-postmarketos-qcom-msm8953.aarch64`;
-   - raise `pkgrel`.
-2. libcamera (`temp/libcamera`, 0.7.1): add the S5KC505A sensor helper from
-   rebrch/tsv-nura,
-   [`0004-ipa-libipa-add-s5kc505a.patch`](https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch),
-   to `source=` and `libcamera/s5kc505a.yaml` from this repository to the
-   tuning files. If the build runs out of memory in a container, build without
-   the Python bindings (`-Dpycamera=disabled`).
-3. `soc-qcom-msm8953`: set the UCM `provider_priority=10`, otherwise apk may pick
-   `alsa-ucm-conf-unisoc-ums9230`.
-4. Update the checksums and build:
+1. Copy the overlay from this repository into pmaports, replacing the
+   packages of the same name:
    ```bash
-   pmbootstrap checksum linux-postmarketos-qcom-msm8953 libcamera soc-qcom-msm8953
-   pmbootstrap build linux-postmarketos-qcom-msm8953 libcamera soc-qcom-msm8953 --force
+   cp -r pmaports/device/community/linux-postmarketos-qcom-msm8953 \
+         pmaports/device/community/thinksmart-view-extras \
+         "$(pmbootstrap config aports)"/device/community/
+   cp -r pmaports/temp/libcamera "$(pmbootstrap config aports)"/temp/
    ```
+   - `linux-postmarketos-qcom-msm8953` (7.0.9-r39) is the postmarketOS kernel
+     package with one patch, `git diff v7.0.9-r0 tsv-v7.0.9-r39` of
+     [isilweo/linux](https://github.com/isilweo/linux), and the matching
+     config (APSS watchdog included);
+   - `libcamera` is libcamera 0.8.0 (pmaports master `temp/libcamera`) with the
+     S5KC505A helper from rebrch/tsv-nura and our tuning file. If the build runs
+     out of memory in a container, build without the Python bindings
+     (`-Dpycamera=disabled`). On v26.06, PipeWire has to be rebuilt against
+     libcamera 0.8, see [docs/camera.md](docs/camera.md);
+   - `thinksmart-view-extras`: Wi-Fi boot guard and the systemd watchdog
+     setting; `thinksmart-view-extras-echo-cancel`: PipeWire echo cancellation.
+2. `soc-qcom-msm8953`: set the UCM `provider_priority=10`, otherwise apk may pick
+   `alsa-ucm-conf-unisoc-ums9230`.
+3. Build:
+   ```bash
+   pmbootstrap checksum soc-qcom-msm8953
+   pmbootstrap build linux-postmarketos-qcom-msm8953 libcamera soc-qcom-msm8953 thinksmart-view-extras --force
+   ```
+4. Add `thinksmart-view-extras` (and `thinksmart-view-extras-echo-cancel` if you
+   want it) to `extra_packages` below.
 5. The relevant parts of our `pmbootstrap_v3.cfg`:
    ```ini
    [pmbootstrap]
@@ -78,7 +86,7 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    ui = console
    systemd = always
    boot_size = 512
-   extra_packages = cage,openssh-server,v4l-utils,i2c-tools,pipewire,wireplumber,pipewire-pulse,alsa-utils,libcamera-tools,iio-sensor-proxy,mesa-dri-gallium,mesa-egl,mesa-gbm,rsync
+   extra_packages = thinksmart-view-extras,cage,openssh-server,v4l-utils,i2c-tools,pipewire,wireplumber,pipewire-pulse,alsa-utils,libcamera-tools,iio-sensor-proxy,mesa-dri-gallium,mesa-egl,mesa-gbm,rsync
 
    [providers]
    alsa-ucm-conf = soc-qcom-msm8953-ucm
@@ -165,8 +173,6 @@ sudo resize2fs "$ROOT"                          # grow the root fs to the end of
 
 ## Known issues
 
-- After long audio sessions the ADSP sometimes stops (`q6asm` error 9 in the
-  kernel log, no sound). A reboot fixes it.
 - Encoding needs a width that is a multiple of 16: 1304x980 straight from the
   camera hangs the encoder until reboot. Scale to 1280x960.
 - Never use `frame_skip_mode` on the encoder; with VBR_VFR the tablet hung when
@@ -176,5 +182,6 @@ sudo resize2fs "$ROOT"                          # grow the root fs to the end of
 - Reading decoder output with the CPU is slow (uncached memory, ~14 MB/s), so
   hand the frames to the GPU as DMABuf (`glimagesink`) instead of
   `videoconvert`.
-- There is no hardware watchdog in Linux; a hung GPU (`hangcheck detected gpu
-  lockup` repeated in the kernel log) does not reboot by itself.
+- A hung GPU (`hangcheck detected gpu lockup` repeated in the kernel log) does
+  not reboot by itself unless it also stops PID 1; see
+  [docs/watchdog.md](docs/watchdog.md).

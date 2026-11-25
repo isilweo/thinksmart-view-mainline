@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: CC0-1.0
+# Samsung S5KC505A (Lenovo ThinkSmart View), libcamera 0.8.0 soft ISP
+#
+# Black level 64 at 10 bits. AWB gains and colour matrices measured on a
+# Datacolor SpyderCheckr 24 under an Elgato Key Light set to 2900, 4000, 5000
+# and 6500 K (flat-fielded with the grey back of the chart). Bayesian AWB keeps
+# the estimate on this light curve instead of plain grey world.
+%YAML 1.1
+---
+version: 1
+algorithms:
+  - BlackLevel:
+      blackLevel: 4096
+  - Awb:
+      algorithm: "bayes"
+      AwbMode:
+        Auto:
+          lo: 2500
+          hi: 8000
+        Incandescent:
+          lo: 2500
+          hi: 3000
+        Tungsten:
+          lo: 3000
+          hi: 3500
+        Fluorescent:
+          lo: 4000
+          hi: 4700
+        Indoor:
+          lo: 3000
+          hi: 5000
+        Daylight:
+          lo: 5500
+          hi: 6500
+        Cloudy:
+          lo: 6500
+          hi: 8000
+      priors:
+        - lux: 0
+          ct: [ 2000, 13000 ]
+          probability: [ 1.0, 1.0 ]
+      colourGains:
+        - ct: 2900
+          gains: [ 1.404, 2.771 ]
+        - ct: 4000
+          gains: [ 1.751, 1.959 ]
+        - ct: 5000
+          gains: [ 1.880, 1.809 ]
+        - ct: 6500
+          gains: [ 2.110, 1.632 ]
+      transversePos: 0.03
+      transverseNeg: 0.03
+  - Ccm:
+      ccms:
+        - ct: 2900
+          ccm: [ 2.223, -0.861, -0.363, -0.531, 1.774, -0.243, -0.060, -0.875, 1.934 ]
+        - ct: 4000
+          ccm: [ 2.282, -1.069, -0.213, -0.458, 1.785, -0.327, -0.058, -0.585, 1.642 ]
+        - ct: 5000
+          ccm: [ 2.316, -1.126, -0.190, -0.439, 1.789, -0.350, -0.058, -0.541, 1.600 ]
+        - ct: 6500
+          ccm: [ 2.357, -1.205, -0.153, -0.412, 1.796, -0.384, -0.064, -0.491, 1.555 ]
+  - Adjust:
+  - Agc:
+...

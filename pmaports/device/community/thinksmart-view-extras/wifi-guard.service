@@ -1,0 +1,10 @@
+[Unit]
+Description=Power cycle the WLAN card when Wi-Fi did not come up at boot
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/wifi-guard
+
+[Install]
+WantedBy=multi-user.target

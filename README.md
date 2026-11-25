@@ -1,40 +1,42 @@
-# Lenovo ThinkSmart View on a mainline-based kernel: camera, Venus, sensors
+# Lenovo ThinkSmart View on a mainline-based kernel
 
-Independent community project for the Lenovo ThinkSmart View CD-18781Y. The
-manufacturers mentioned here do not sponsor or endorse this project.
+Independent community project for the Lenovo ThinkSmart View CD-18781Y
+(APQ8053/MSM8953). The manufacturers mentioned here do not sponsor or endorse
+this project.
 
-Patches that make the front camera, the Venus hardware video encoder and
-decoder, and the proximity/light sensor work on the ThinkSmart View
-(APQ8053/MSM8953) with postmarketOS. Tested on five CD-18781Y units.
+postmarketOS on the ThinkSmart View with a working front camera, the Venus
+hardware video encoder and decoder, proximity/light sensor, full-duplex audio
+with echo cancellation, a hardware watchdog and reliable Wi-Fi. Tested on
+five CD-18781Y units.
 
-I used Claude (an AI coding assistant) to help develop and document my
-changes. The kernel series and the debug patch record that assistance with
-`Assisted-by:`. Third-party contributions are credited below. The test
-results describe the configurations I tested. The commits have no
-`Signed-off-by:` yet: before upstream submission, each human contributor or
-submitter must be able to certify their contribution under the
-[Developer's Certificate of Origin](https://developercertificate.org/) and add
-their own `Signed-off-by:` where applicable.
+- **Kernel source:** [isilweo/linux](https://github.com/isilweo/linux), a fork
+  of [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux).
+  Branch `tsv/device` (one commit per change on `v7.0.9-r0`), `tsv/debug`
+  (plus local debug commits), tag `tsv-v7.0.9-r39` (what runs on our tablets).
+- **This repository:** how to build and install it, a postmarketOS overlay in
+  `pmaports/`, and notes per topic in `docs/`.
 
-**How this was made.** The patches were developed in interactive sessions
-with Claude Code (Anthropic, model claude-opus-5-5) working on the
-tablets over SSH: it read the vendor device tree and logs, wrote the code,
-comments and changelogs, and built and tested each kernel on the device
-while I directed the work, checked the results and decided what to keep.
-The q6asm-dai fix in `kernel/audio/` was diagnosed and written by Codex
-(OpenAI, gpt-6.2-astra) from the kernel sources and our logs, then built and
-tested on the device. The CAMSS rework (patches 0015-0022) was reviewed with Codex (OpenAI,
-gpt-6.2-astra), which found an off-by-one in the UB split, a missing
-height limit, a burst length difference on MSM8916/MSM8939 and a probe
-behaviour change on MSM8939; those were fixed before testing. The APSS
-watchdog patches (0031-0032) and the SDIO probe diagnostic in
-`kernel/debug/` were written by Codex from the vendor DT and kernel
-sources, then built and tested on the device. Codex also took apart the
-stock WLAN stack (qcacld-2.0 module and the msm-3.18 kernel from the
-device) to find how it powers the card, which led to 0033-0034. Testing:
-`checkpatch.pl --strict`, kernel builds without warnings in the changed
-files, and on the device libcamera `cam`, GStreamer pipelines and the
-sensor sysfs interfaces.
+## What works
+
+| Part | Status | Notes |
+|---|---|---|
+| Front camera S5KC505A | 1304x980 at 30 fps, libcamera 0.8.0 SoftISP, calibrated colour | [docs/camera.md](docs/camera.md) |
+| Venus H.264 encoder, H.264/H.265 decoder | Hardware encode and decode, RTSP doorbell streams | [docs/venus.md](docs/venus.md) |
+| Speaker, microphones | TAS5782M speaker; full duplex with WebRTC echo cancellation | [docs/audio.md](docs/audio.md) |
+| Proximity and light (VCNL4200), accelerometer, touch | Working; light reads only straight ahead | [docs/sensors.md](docs/sensors.md) |
+| Wi-Fi (QCA9379) | Comes up on every boot (it used to fail on some units) | [docs/wifi.md](docs/wifi.md) |
+| APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |
+
+Not done: beamforming with the two DMICs. The kernel changes are not upstream
+yet, and a review found bugs to fix first: see
+[docs/upstream-status.md](docs/upstream-status.md).
+
+## Install
+
+Step by step from the stock firmware (EDL backup, build, flashing, first
+boot): [INSTALL.md](INSTALL.md). Bootloader: lk2nd from Felix Kaechele
+(`https://felix.kaechele.ca/projects/thinksmart`), which enables touch; the
+stock pmOS lk2nd image did not for us.
 
 **No firmware is included.** The installation uses firmware already present
 on your device (Venus, ADSP and Wi-Fi firmware from its own `modem` partition,
@@ -43,241 +45,61 @@ supplied separately by the postmarketOS `firmware-qcom-msm8953` package. Keep
 partition dumps private. This repository grants no rights to redistribute
 those files.
 
-## What works (tested on our units)
-
-| Part | Status |
-|---|---|
-| Front camera Samsung S5KC505A | `ccs` driver + quirk, CAMSS on MSM8953 (own CSIPHY and VFE clock tables, VBIF described in the DT, per-SoC QoS/DS and UB size, write master geometry in frame based mode), libcamera SoftISP (GPU debayer): 1304x980 at 30 fps without dropped frames, using about one CPU core. Colour matrices and AWB light curve calibrated on a SpyderCheckr 24 (see below). |
-| Venus H.264 encoder | `v4l2h264enc`: bitrate control works (1 Mb/s target gives 931-959 kb/s), 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
-| Venus H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC (that fix is so far tested on one unit; the others still run the version before it). |
-| Venus H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core, see below. |
-| Proximity (VCNL4200) | Enabled, IR LED no longer runs hot. A hand at 5-10 cm gives about 800-1800 counts. Background is 0-3 with a clean window but up to about 60 under incandescent lamps, so wake thresholds below that latch "near". |
-| Ambient light (VCNL4200) | Works, but the window has a narrow field of view straight ahead: it reads light from in front of the screen, not the room. Rough check against a phone: 15 lx gives 3, 158 lx gives 91, 260 lx gives 255 at 400 ms integration time. Good for dark/dim/bright, not for lux. |
-| Accelerometer BMA253 | Mount matrix added; iio-sensor-proxy reports the right orientation. |
-| Touch | Both FT8201 and HX83100A nodes enabled; the fitted one probes. |
-| Speaker TAS5782M | Uses Felix Kaechele's TAS5782M support (see `kernel/third-party/`). |
-
-Not done: beamforming with the two DMICs.
-
-**Full-duplex audio and echo cancellation.** `kernel/audio/` has a fix for
-`q6asm-dai`: after a stream was stopped and prepared again, the driver opened
-the same ASM session a second time without closing it, the ADSP refused with
-error 9 (`ADSP_EALREADY`) and audio was dead until reboot. With the fix,
-PipeWire's WebRTC echo canceller (`userspace/pipewire/60-echo-cancel.conf`,
-needs the `pipewire-echo-cancel` and `pipewire-webrtc` packages) passed 20/20
-full-duplex cycles and removes about 40 dB of speaker echo; during loud
-playback it also ducks near-end speech, as echo cancellers do with the
-speaker this close to the microphones. Tested on one unit so far.
-
-**Camera colour.** Colour matrices and AWB gains were measured on a Datacolor
-SpyderCheckr 24 under an Elgato Key Light at 2900, 4000, 5000 and 6500 K,
-flat-fielded with the grey back of the chart. Median CIE76 error after
-correction is 3.9-5.8. `libcamera/s5kc505a.yaml` (libcamera 0.8.0) uses the
-full matrices and Bayesian AWB along the measured light curve instead of grey
-world. With libcamera 0.7.x the soft ISP turns clipped highlights pink with the
-full matrices, so `libcamera/s5kc505a-libcamera-0.7.yaml` blends them 50/50
-with the identity and keys them on the soft ISP's estimateCCT() values. The soft ISP AGC in libcamera 0.7.1 has no manual exposure,
-exposure compensation or highlight protection, so bright objects on a dark
-background clip. libcamera 0.8.0 moved it to the common libipa AGC: manual
-`ExposureTime`/`AnalogueGain` and `ExposureValue` work on this camera (EV -1
-cut clipped pixels from 1.06% to 0.02% in a desk scene), and it adds lens
-shading correction.
-
-The two DMICs are quiet: we apply a software gain of 4 (`volume volume=4.0`)
-before encoding.
-
 ## Layout
 
 ```
-kernel/series/       34 patches, one change each (git format-patch)
-kernel/audio/        q6asm-dai stream lifetime fix (written with Codex)
-kernel/debug/        ramoops, Venus fw_debug, qdsp6 traces, SDIO probe stage; not for upstream
-kernel/third-party/  TAS5782M support adapted from Felix Kaechele's tree
-kernel/config.fragment
-libcamera/           S5KC505A tuning files (libcamera 0.8.0 and 0.7.x)
-userspace/pipewire/  echo cancellation config
-userspace/systemd/   systemd runtime watchdog drop-in
-userspace/wifi-guard/ safety net: power cycles the WLAN card if Wi-Fi still fails at boot
-LICENSES/            full license texts
+INSTALL.md
+docs/                    notes per topic, upstream status
+pmaports/                postmarketOS overlay (pmaports v26.06):
+  device/community/linux-postmarketos-qcom-msm8953/   kernel 7.0.9-r39: patch from isilweo/linux + config
+  device/community/thinksmart-view-extras/           Wi-Fi boot guard, watchdog setting, echo cancellation
+  temp/libcamera/                                      libcamera 0.8.0 with the S5KC505A helper and tuning
+libcamera/               S5KC505A tuning files (0.8.0 and 0.7.x) for manual use
+LICENSES/                full license texts
 ```
 
-## Base and how to build
+## How this was made
 
-Step by step from the stock firmware (EDL backup, image, flashing, first
-boot): [INSTALL.md](INSTALL.md).
-
-The patches apply to the msm8953-mainline kernel
-`https://github.com/msm8953-mainline/linux` tag `v7.0.9-r0`, which postmarketOS
-v26.06 packages as `linux-postmarketos-qcom-msm8953`. They are not rebased
-onto torvalds/master yet. Only the final state of the series was built and
-tested; the intermediate commits were not built one by one.
-
-In pmaports (v26.06):
-
-1. copy `kernel/series/*.patch` (and `kernel/third-party/tas5782m-support.diff`
-   for the speaker) into `device/community/linux-postmarketos-qcom-msm8953/`,
-   add them to `source=` and apply `kernel/config.fragment`;
-2. libcamera: we use 0.8.0 (the `temp/libcamera` package of pmaports master);
-   0.7.1 works as well. Add the S5KC505A sensor helper from rebrch/tsv-nura,
-   [`camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch`](https://github.com/rebrch/tsv-nura/blob/32e84a9f4bf5cbbefc2135b1bf5b57b37e036ae3/camera/libcamera-pmaports/0004-ipa-libipa-add-s5kc505a.patch)
-   (it applies unchanged to 0.7.1 and 0.8.0), and the tuning file as
-   `s5kc505a.yaml`: `libcamera/s5kc505a.yaml` under
-   `/usr/share/libcamera/ipa/softisp/` on 0.8.0, or
-   `libcamera/s5kc505a-libcamera-0.7.yaml` under `ipa/simple/` on 0.7.x. On v26.06, PipeWire from Alpine 3.24 is
-   built against libcamera 0.7 and blocks the upgrade; we rebuilt PipeWire
-   1.6.11 from Alpine edge (it carries a libcamera 0.8 compatibility patch),
-   without the onnx filter-graph subpackage, which needs onnxruntime;
-3. `soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10), otherwise
-   apk may pick `alsa-ucm-conf-unisoc-ums9230`;
-4. `pmbootstrap checksum`, `pmbootstrap build`.
-
-Bootloader: lk2nd from Felix Kaechele (`https://felix.kaechele.ca/projects/thinksmart`),
-which enables touch; the stock pmOS lk2nd image did not for us.
-
-## Notes for using Venus
-
-- Stop GStreamer pipelines with EOS (`gst-launch-1.0 -e` and SIGINT, or
-  `timeout -s INT`). Killing the decoder mid-stream used to hang the SoC; the
-  last vdec patch fixes the case we hit, but EOS is still the safe way.
-- The TrustZone watchdog resets the board about 45 s after a hard hang.
-- Encoder pipeline we use (camera to RTP):
-  ```
-  libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! video/x-raw,format=NV12
-    ! v4l2h264enc extra-controls="controls,video_bitrate=1000000,video_gop_size=30"
-    ! 'video/x-h264,level=(string)4,profile=(string)baseline' ! h264parse config-interval=-1
-    ! rtph264pay pt=96 mtu=1200 ! udpsink host=... port=5000
-  ```
-  The soft ISP outputs RGBA and `videoconvert` turns it into NV12 on the CPU.
-  With libcamera 0.7.1 that limited us to 640x480; with 0.8.0, 1280x960 runs at
-  30 fps into Venus using about one of the eight cores. Converting on the GPU
-  instead (`glupload ! glcolorconvert ! gldownload`) only reached 15 fps,
-  because of the download from GPU memory.
-- Decoder: `rtph264depay ! h264parse ! v4l2h264dec ! glimagesink`. Its own
-  latency is about 4 ms for streams without B-frames; enabling
-  `display_delay_enable` (decode-order output) changes that by well under a
-  millisecond, so it is not worth setting
-  (`waylandsink` gave a black screen in cage for us). We only tested streams
-  encoded without B-frames.
-- `pipewiresrc` together with the camera in one pipeline lost its clock for us;
-  run audio and video as separate processes, `pipewiresrc provide-clock=false`.
-
-## Playing camera streams (RTSP, H.265)
-
-A UniFi Protect doorbell stream (H.265, 960x720 at 20 fps) plays on the
-tablets through Venus. Working pipeline:
-
-```
-rtspsrc location=rtsps://... protocols=tcp
-  ! rtph265depay ! video/x-h265,stream-format=byte-stream,alignment=au
-  ! v4l2h265dec ! videoconvert n-threads=4 ! video/x-raw,format=RGBA ! appsink
-```
-
-- Decoding alone costs about 6% of one core; with the RGBA conversion about
-  24%, no dropped frames (about 19 fps measured on three units). The first
-  frame arrives about 1.1 s after the pipeline starts.
-- Protect uses a self-signed certificate. We currently connect with
-  certificate validation turned off (`tls-validation-flags=0`), which means
-  the client does not authenticate the camera. A better setup is to make
-  `rtspsrc` trust that certificate through its `tls-database` property (set
-  from code); we have not tried that yet.
-- Use the explicit chain: `decodebin` after `rtspsrc` failed on the tablet with
-  "Internal data stream error" (caps negotiation with the H.265 depayloader).
-- `h265parse` is not needed: `rtph265depay` already outputs byte-stream in
-  whole access units. That matters because `h265parse` lives in
-  gst-plugins-bad, which a fresh image does not have.
-- When an element is missing, `gst_parse_launch()` returns a partial pipeline
-  together with a recoverable error instead of NULL. Code that only checks for
-  NULL then waits forever without frames and without an error; check the
-  `GError`.
-- UniFi Protect: drop `?enableSrtp` from the stream URL. With SRTP the
-  depayloader reports "The stream is in the wrong format".
-- Re-encoding the frames to JPEG only reaches about 7 fps, so it is not an
-  option for live video.
-
-## Known issues
-
-- The Adreno 506 (freedreno) can hang: the kernel log repeats `hangcheck
-  detected gpu lockup` every second, the display client sits in D state and
-  `reboot` hangs. Our workaround is a userspace guard that watches `/dev/kmsg`
-  and does a SysRq sync + reboot after 60 s of lockup, at most 3 times per
-  hour. With patches 0031-0032 (`CONFIG_QCOM_WDT`) and
-  `userspace/systemd/80-apss-watchdog.conf`, systemd also feeds the APSS
-  watchdog (`/dev/watchdog0`, 30 s), so a hang that stops PID 1 resets the
-  board. Measured with idle CPUs, the reset comes later than programmed:
-  about 115 s for a 30 s timeout and 56 s for 10 s. Our guess is that the
-  counter pauses while all cores are in power collapse; not verified.
-- Wi-Fi (QCA9379, `ath10k_sdio`) could fail at boot with -110 ("timed out
-  while setting default block size", "unable to reset sdio", "Could not init
-  hif"): on one of our five units in up to half of the boots, on the others
-  rarely. The card then stayed broken across warm reboots, because nothing
-  removed its supply. The stock Android kernel powers the card down right
-  after enumeration and powers it up again, with a full SDIO
-  reinitialization, when the WLAN driver loads. Patches 0033-0034 do the same
-  in the standard way: `cap-power-off-card` on SDHC2 lets the MMC core keep
-  the card off until `ath10k_sdio` probes, and L12 (the card's I/O supply)
-  stays on at 1.8 V as in the stock DT. Without the L12 part, resuming the card
-  failed with -EBUSY in about half of the boots on two other units. With both,
-  30 warm reboots each on the affected unit and on one of those brought Wi-Fi
-  up every time, with Bluetooth set up normally. Things that made no
-  difference before that: `max-frequency` 100 MHz, keeping the unused
-  `wlan_3v3` regulator on, disabling runtime PM of the MMC host, loading
-  `ath10k_sdio` earlier. `userspace/wifi-guard/` stays as a safety net: when
-  the card is not bound 15 s after the driver loaded, or the driver logged
-  -110 and `wlan0` is not up after 60 s, it unbinds and binds the MMC host
-  (`7864900.mmc`), which also power cycles the card; a missing link alone
-  (access point down) does not trigger it.
-- Without the `kernel/audio/` fix, the ADSP stops after some audio stream
-  restarts (`q6asm` error 9, no sound until reboot); full-duplex use such as an
-  echo canceller makes it happen within a few cycles.
-
-## Before upstreaming
-
-These patches run on our tablets, but not all of them are ready to be sent
-to the kernel. A review of the whole series with Codex found real bugs to fix
-first: 0002 (the HFI parser copies a property before checking its length),
-0008 (EOS state changed without `inst->lock`), 0009 (the PM reference is
-dropped before the EOS command is sent), 0024 (wrong sample delay after the
-integration time is changed through IIO) and 0025 (enabling a threshold event
-after autosuspend may not restart measurements). Several others need rework
-for the maintainers (0003-0005, 0007, 0011, 0012, 0026, 0029, 0030, and the
-TAS5782M diff). 0027 and 0028 are the closest to being sendable. Generic
-driver changes would go to the mainline lists; the board DTS is only in
-msm8953-mainline so far.
-
-## Where the values come from
-
-The individual patch descriptions identify the source of board wiring,
-operating parameters and register sequences. Values marked "stock" were read
-from the original Lenovo software on the device: its device tree (supplies,
-GPIOs, QoS settings), the ADSP sensor driver (VCNL4200 LED settings) and the
-camera library `libmmcamera_s5kc505a.so` (the S5KC505A register tables in
-patch 0011, which are also published in rebrch/tsv-nura). Measurements on our
-units are identified separately.
+I used AI coding assistants to develop and document these changes, and the
+commits record that with `Assisted-by:`. Claude Code (Anthropic,
+claude-opus-5-5) worked on the tablets over SSH. It read the vendor device
+tree and logs, wrote code, comments and changelogs, and built and tested each
+kernel on the device. I directed the work, checked the results and decided
+what to keep. Codex (OpenAI, gpt-6.2-astra) wrote the q6asm-dai fix and the
+watchdog patches, took apart the stock WLAN stack that led to the Wi-Fi fix,
+and reviewed the CAMSS rework, the Wi-Fi guard and the whole series. Testing:
+`checkpatch.pl --strict`, kernel builds without warnings in the changed files,
+and on the device libcamera `cam`, GStreamer pipelines, sensor sysfs
+interfaces and series of warm reboots. The commits have no `Signed-off-by:`
+yet; see [docs/upstream-status.md](docs/upstream-status.md).
 
 ## Credits
 
 - Felix Kaechele: the ThinkSmart View device tree, lk2nd, and the TAS5782M
-  support (`kernel/third-party/`).
-- rebrch/tsv-nura (reichbc): the S5KC505A libcamera helper and an independent
-  S5KC505A driver with the same register tables
-  (https://github.com/rebrch/tsv-nura).
+  support the speaker commit is adapted from.
+- rebrch/tsv-nura (reichbc): the S5KC505A libcamera helper (fetched by the
+  libcamera package here) and an independent S5KC505A driver with the same
+  register tables (https://github.com/rebrch/tsv-nura).
 - msm8953-mainline and postmarketOS maintainers.
 
 ## License
 
-- Kernel driver changes (`kernel/series/0001`-`0015`, `0018`-`0025`,
-  `kernel/audio/`, the C part of `kernel/debug/` except `0003`,
-  `kernel/third-party/`): GPL-2.0-only, see
-  `LICENSES/GPL-2.0-only.txt`.
-- `kernel/debug/0003` changes `drivers/mmc/core/sdio_bus.c`, which is
-  GPL-2.0-or-later; the change is under the same license.
-- The device tree binding changes (`kernel/series/0016`, `0031`):
-  GPL-2.0-only OR BSD-2-Clause, like the bindings they change. See
-  `LICENSES/GPL-2.0-only.txt` and `LICENSES/BSD-2-Clause.txt`.
-- Device tree changes: `msm8953.dtsi` (`kernel/series/0017`, `0032`, original
-  copyright (c) 2022 The Linux Foundation) and `apq8053-lenovo-cd-18781y.dts`
-  (`kernel/series/0026`-`0030`, `0033`-`0034` and the DTS part of `kernel/debug/`, original
-  copyright (c) 2024 Felix Kaechele): BSD-3-Clause, like the files they
-  change. See `LICENSES/BSD-3-Clause.txt`.
-- `README.md`, `INSTALL.md`, `kernel/config.fragment`, the
-  `libcamera/*.yaml` tuning files and `userspace/`: CC0-1.0, see `LICENSES/CC0-1.0.txt`.
+- The kernel patch in `pmaports/device/community/linux-postmarketos-qcom-msm8953/`
+  and the commits in isilweo/linux change Linux kernel files. Each change is
+  under the license of the file it changes: GPL-2.0-only for most drivers,
+  GPL-2.0-or-later for `drivers/mmc/core/sdio_bus.c`, GPL-2.0-only OR
+  BSD-2-Clause for the device tree bindings, and BSD-3-Clause for
+  `msm8953.dtsi` (original copyright (c) 2022 The Linux Foundation) and
+  `apq8053-lenovo-cd-18781y.dts` (original copyright (c) 2024 Felix
+  Kaechele). See `LICENSES/`.
+- The kernel and libcamera package recipes (APKBUILDs) and the other tuning
+  files in `pmaports/temp/libcamera/` come from postmarketOS pmaports and are
+  GPL-3.0, like pmaports; see `LICENSES/GPL-3.0.txt`. The kernel config there
+  is generated from the kernel sources. The two libcamera patches in
+  `pmaports/temp/libcamera/` are libcamera code (LGPL-2.1-or-later, see
+  `LICENSES/LGPL-2.1-or-later.txt`) by their respective authors, carried by
+  pmaports.
+- `README.md`, `INSTALL.md`, `docs/`, the `libcamera/*.yaml` and
+  `pmaports/temp/libcamera/s5kc505a.yaml` tuning files and everything in
+  `pmaports/device/community/thinksmart-view-extras/`: CC0-1.0, see
+  `LICENSES/CC0-1.0.txt`.
