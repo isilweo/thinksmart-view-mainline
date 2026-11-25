@@ -41,7 +41,7 @@ Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
 | 2 | Venus HFI parser | Fixed on `fix/venus` (was: copies a property before checking its length against the remaining bytes). |
 | 4, 5, 7 | Venus encoder rate and buffers | Too broad for upstream as they are (4 replaces both limits when one is missing, 5 applies to all Venus 3.x encoders, 7 raises the minimum for all clients). |
 | 6 | Venus LTR mode | Good candidate after a test with LTR frames. |
-| 8 | Venus EOS drain | Fixed on `fix/venus` (was: state changed without `inst->lock`; the decoder can miss the end of stream). Still needs one more capture QBUF after the EOS. |
+| 8 | Venus EOS drain | Fixed on `fix/venus` (was: state changed without `inst->lock`; the decoder can miss the end of stream). Still needs one more capture QBUF after the EOS. A separate, older bug hangs the decoder on a resolution change followed by EOS (see below). |
 | 9 | Venus decoder command PM | Fixed on `fix/venus` (was: the PM reference is dropped before the command is sent). |
 | 10, 13 | ccs pixel array sizes and default crop | Candidates after `v4l2-compliance`. |
 | 11 | ccs S5KC505A quirk | Needs agreement with the CCS maintainer. The register tables come from the stock camera library: the legal basis for using them must be settled before submitting or redistributing binaries built from them. |
@@ -115,6 +115,62 @@ Known limitations, left as they are:
   before runtime PM is enabled (upstream has since reordered probe,
   de1839edfe36 and following); during system sleep with events enabled the
   sensor keeps measuring, but its interrupt is not a wakeup source.
+
+## Venus fixes (branch `fix/venus`)
+
+`fix/venus` is `tsv/device` with commits 2, 8 and 9 redone in place (still 36
+commits, tip `12850d7a8`). Reviewed with Codex (gpt-6.2-astra) and
+independently with Claude Fable, round after round until neither reported
+anything critical: three rounds on the fixes, a `/simplify` pass with four
+agents (reuse, simplification, efficiency, altitude), then four rounds on the
+final code. A version of 8 that ended the drain from a work item and flushed
+the firmware was dropped after review (work lifetime at close, a shared flush
+completion, ownership of buffers held back for READONLY references). Built as
+package r63 (`fix/venus` + the three `tsv/debug` commits) and tested on unit 5.
+
+| `fix/venus` | Commit | Change |
+|---|---|---|
+| 2 | media: venus: hfi_parser: tolerate a truncated last capability entry | `parse_caps()` gets the remaining length and checks it before reading the entry count and before copying. Only the shape seen on VE.4.2 is accepted: SYS_INIT_DONE on HFI 3xx cut exactly half way into the last capability entry; that entry is dropped (`dev_info_once`; on unit 5 it is type 0x14). |
+| 8 | media: venus: vdec: complete the drain when EOS lands in a held buffer | The HFI callback only records an EOS that lands in a picture buffer the driver does not hold (atomic flag, output picture buffer type only); the next capture QBUF takes it under `inst->lock`, carries LAST and moves DRAIN to STOPPED. DEC_CMD_STOP enters DRAIN before sending the EOS and sends nothing in STOPPED; STOP and START return -EBUSY in DRAIN (STOP also during a resolution change inside a drain); STOP with a queue not streaming still succeeds. `vdec_start_capture()` publishes the new state before `hfi_session_continue()`, and `drain_active` lasts the whole drain. |
+| 9 | media: venus: vdec: resume the decoder before sending the EOS | `vdec_pm_get()` right before `hfi_session_process_buf()` and an autosuspend put right after, under `inst->lock`, only on the path that sends the EOS. |
+
+Tests on unit 5 (r49, r60, r63), with GStreamer `v4l2h264dec`/`v4l2h265dec`:
+EOS after a local encode, an RTP stream cut off with EOS after 4 s of silence
+while the Venus core was runtime suspended, a slow consumer, ten SIGINTs while
+decoding. No hang, no kernel messages. The truncated-capability message
+appears once at boot.
+
+Known limitations, left as they are (all in the commit messages):
+
+- 8: the drain needs one more capture QBUF after the EOS.
+- 8: STREAMOFF on the capture queue in DRAIN does not flush the firmware (as
+  before), so an EOS of the aborted drain can end a later drain early.
+- 8: -EBUSY for a second STOP/START during a drain is new behaviour (required
+  by the decoder interface); STOP in STOPPED no longer sends a second EOS.
+- 8: the found-buffer LAST path still changes the state without the lock;
+  error paths after a firmware failure can race with it in narrow windows.
+- 9: the reference covers sending the EOS only; `venc_encoder_cmd()` has the
+  same pattern and is not changed.
+- From the base: `parse_profile_level()`, `parse_alloc_mode()` and
+  `parse_raw_formats()` still read before a full length check; `fill_caps()`
+  skips a group that would exactly fill the table.
+
+### Hang on a resolution change followed by EOS (base bug, not fixed)
+
+Found while testing on unit 5 and reproduced on r39 without these fixes: an
+H.264 RTP stream that changes from 640x480 to 1280x720, then EOS. The pipeline
+hangs in STREAMOFF of the output queue, in `mutex_lock(&inst->lock)` in
+`vdec_stop_streaming()`; no task that is alive holds the lock. The first time it
+also stalled the GPU (display frozen). H.265 did not hang in our runs. Likely
+cause, from code review by both reviewers: capture buffers kept on
+`inst->delayed_process` (READONLY references) are never unlinked when the
+capture queue is stopped and freed during the resolution change, and
+`delayed_process_buf_func()` then walks a stale list while holding
+`inst->lock` (at the hang a kworker on the `events` queue was running). A fix
+would unlink such buffers on capture STREAMOFF and in `vdec_buf_cleanup()`.
+A lockdep build to confirm it did not boot on unit 5 (recovered with
+`fastboot boot` of a rescue image from lk2nd and `apk` from the initramfs
+shell). Separate task.
 
 ## Where the values come from
 

@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | H.264 encoder | `v4l2h264enc`: bitrate control works (a 1 Mb/s target gives 931-959 kb/s); 640x480 at 30 fps costs about 1.3 of 8 cores including the camera. Width must be a multiple of 16. |
-| H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC in the case we hit; the review fixes for the EOS handling are on `fix/venus` (package r49), not yet tested. |
+| H.264 decoder | `v4l2h264dec`: 1280x960 at about 238 fps using 0.1 core. A stream that is cut off no longer hangs the SoC, and EOS ends the pipeline (fixes on `fix/venus`, tested as r63). A resolution change in the stream followed by EOS still hangs the decoder (older bug, see [upstream-status.md](upstream-status.md)). |
 | H.265 decoder | `v4l2h265dec`: a 960x720 20 fps RTSP stream at about 6% of one core. |
 
 ## Notes
