@@ -4,13 +4,18 @@ All changes live as commits in
 [isilweo/linux](https://github.com/isilweo/linux), a fork of
 [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux):
 
-- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus the 36 commits below, one
-  change each;
+- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 41 commits, one change
+  each. Since r80 it includes the review fixes described below (the former
+  local branches `fix/vcnl`, `fix/venus` and `fix/venus-drc`); the numbers in
+  the review table refer to the series as it was in r39;
 - `tsv/debug`: `tsv/device` plus three local debug commits (ramoops and a
   Venus `fw_debug` parameter, qdsp6 dynamic debug traces, the SDIO probe stage
   on -110);
-- tag `tsv-v7.0.9-r39`: `tsv/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.0.9-r39` that runs on our tablets.
+- tag `tsv-v7.0.9-r80`: `tsv/debug` as built into the postmarketOS package
+  `linux-postmarketos-qcom-msm8953-7.0.9-r80` that runs on our tablets
+  (tested on unit 5: Venus resolution change + EOS 9/9 without a hang,
+  Wi-Fi, Bluetooth, watchdog, VCNL4200); tag `tsv-v7.0.9-r39` is the
+  previous release, before the review fixes.
 
 Only the final state was built and tested; the intermediate commits were not
 built one by one. The commits have no `Signed-off-by:` yet. Before upstream
