@@ -4,18 +4,18 @@ All changes live as commits in
 [isilweo/linux](https://github.com/isilweo/linux), a fork of
 [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux):
 
-- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 41 commits, one change
-  each. Since r80 it includes the review fixes described below (the former
-  local branches `fix/vcnl`, `fix/venus` and `fix/venus-drc`); the numbers in
-  the review table refer to the series as it was in r39;
+- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 50 commits, one change
+  each. It includes the review fixes described below (since r80: the former
+  local branches `fix/vcnl`, `fix/venus` and `fix/venus-drc`; since r93:
+  `fix/q6asm-wdt`); the numbers in the review table refer to the series as it
+  was in r39;
 - `tsv/debug`: `tsv/device` plus three local debug commits (ramoops and a
   Venus `fw_debug` parameter, qdsp6 dynamic debug traces, the SDIO probe stage
   on -110);
-- tag `tsv-v7.0.9-r80`: `tsv/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.0.9-r80` that runs on our tablets
-  (tested on unit 5: Venus resolution change + EOS 9/9 without a hang,
-  Wi-Fi, Bluetooth, watchdog, VCNL4200); tag `tsv-v7.0.9-r39` is the
-  previous release, before the review fixes.
+- tag `tsv-v7.0.9-r93`: `tsv/debug` as built into the postmarketOS package
+  `linux-postmarketos-qcom-msm8953-7.0.9-r93` that runs on our tablets. Earlier
+  releases: `tsv-v7.0.9-r80` (Venus and VCNL4200 fixes) and `tsv-v7.0.9-r39`
+  (before the review fixes).
 
 Only the final state was built and tested; the intermediate commits were not
 built one by one. The commits have no `Signed-off-by:` yet. Before upstream
@@ -58,10 +58,10 @@ Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
 | 26 | Both touchscreens | Keep local: both controllers share reset and IRQ lines; better to pick the variant from lk2nd. |
 | 27, 28 | Accelerometer mount matrix, sensor I²C pins | The closest to being sendable (board DTS, so to msm8953-mainline). |
 | 29, 30 | Proximity and camera nodes | 29 fixed on `fix/vcnl`; 30 needs `bus-type`, a binding extension for rotation 270 and a clean description of the camera standby line. |
-| 31, 32 | APSS watchdog binding and node | Can go to mainline (`msm8953.dtsi` is upstream). |
-| 33, 34 | WLAN I/O supply and `cap-power-off-card` | Board DTS, to msm8953-mainline. |
+| 31, 32 | APSS watchdog binding and node | Reviewed again by Claude Fable: binding unchanged; the node commit got a new title ("Add watchdog node") and a corrected description (vendor DT, interrupt type by mainline convention, 31 s limit). Can go to mainline. |
+| 33, 34 | WLAN I/O supply and `cap-power-off-card` | Since r93 three commits: run the SDHC2 I/O supply (L12) at 1.8 V, keep it always on, and `cap-power-off-card`, with descriptions based on the hardware (L11 is the card's vmmc, GPIO 75 its reset, `wlan_3v3`/GPIO 77 is never used). Bluetooth (same QCA9379, over UART) was tested without `ath10k_sdio` bound, cold and after `rmmod`: it initializes and scans while the WLAN card is off, so it does not depend on L11. Also fixed: the Bluetooth `compatible` (`qcom,qca9379-bt` with the `qcom,qca6174-bt` fallback) plus its binding. Board DTS, to msm8953-mainline. |
 | 35 | TAS5782M | Downstream adaptation of Felix Kaechele's work; volume uses TAS5805M registers and I²C errors are not propagated. Authorship to be sorted out with Felix. |
-| 36 | q6asm-dai stream lifetime | Written with Codex; not yet reviewed by a second party. |
+| 36 | q6asm-dai stream lifetime | Replaced in r93. Most of it duplicated fixes that mainline already has, so `tsv/device` now carries five backports from mainline (Srinivas Kandagatla: no STOPPED state from STOP/EOS, close only when running, error handling in prepare; Michael McAllister: reset PCM positions on prepare; Vladyslav Tymoshchuk: position of a full ring) and two of our own on top: tear down a partially set up stream in one helper, and check capture buffer queueing in prepare. Reviewed by Codex and Claude Fable, four rounds each; tested on unit 5 (playback and capture XRUN, drop/prepare, hw_params changes, 20/20 full duplex with echo cancel). |
 
 ## VCNL4200 fixes (branch `fix/vcnl`)
 

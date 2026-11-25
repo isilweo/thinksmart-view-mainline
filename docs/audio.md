@@ -15,13 +15,15 @@ apk may pick `alsa-ucm-conf-unisoc-ums9230`.
 
 ## Full duplex and echo cancellation
 
-The commit "ASoC: qcom: q6asm-dai: close the DSP stream before reopening it"
-fixes the ADSP dying after a few stream restarts. Before it, a second prepare
-after STOP opened the same ASM session again without closing it. The ADSP
-refused that with error 9 (`ADSP_EALREADY`), and audio was dead until reboot.
-Full-duplex use such as an echo canceller hit it within a few cycles. The fix
-was diagnosed and written by Codex from the kernel sources and our logs, then
-built and tested on the device.
+Without the q6asm-dai fixes the ADSP died after a few stream restarts: a
+second prepare after STOP opened the same ASM session again without closing
+it, the ADSP refused that with error 9 (`ADSP_EALREADY`), and audio was dead
+until reboot. Full-duplex use such as an echo canceller hit it within a few
+cycles. Mainline has since fixed most of it; `tsv/device` carries those five
+commits as backports, plus two of ours: tearing down a partially set up stream
+(a failed media format used to leave the stream open) and checking capture
+buffer queueing in prepare. Tested on one unit with XRUN, drop/prepare and
+hw_params changes for playback and capture.
 
 With the fix, PipeWire's WebRTC echo canceller passed 20/20 full-duplex
 cycles and removes about 40 dB of speaker echo. During loud playback it also

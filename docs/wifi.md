@@ -27,10 +27,11 @@ always got a full power cycle before use.
 
 ## The fix
 
-Two commits on `tsv/device` do the same in the standard way:
+Three commits on `tsv/device` do the same in the standard way (the first point is two commits: 1.8 V, then always on):
 
-1. **Keep the WLAN I/O supply on.** L12 (SDHC2 VDD-IO) is fixed at 1.8 V and
-   always on, as in the stock DT (`qcom,vdd-io-always-on`).
+1. **Keep the SDHC2 I/O supply at 1.8 V and on.** L12 (SDHC2 VDD-IO) is fixed
+   at 1.8 V (with the old 1.8-2.95 V range sdhci-msm started the lines at
+   2.95 V) and always on, as in the stock DT (`qcom,vdd-io-always-on`).
 2. **`cap-power-off-card` on SDHC2.** The MMC core runtime suspends the card
    after enumeration (vmmc L11 off, reset GPIO 75 low through `wlan_pwrseq`).
    It resumes the card with a full reinitialization just before `ath10k_sdio`
