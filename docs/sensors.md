@@ -11,6 +11,10 @@ Both sensors sit on a GPIO I²C bus. The base DT used the wrong pins (14/15)
 for it; it is on GPIO 6/7. The VCNL4200 LED settings (8T duty, two pulses,
 75 mA, 1/1280) come from the stock ADSP sensor driver.
 
-Review notes on the VCNL4200 patches (sample delay after an IIO integration
-time change, and threshold events after autosuspend) are in
-[upstream-status.md](upstream-status.md).
+The VCNL4200 patches were reworked after review on the branch `fix/vcnl`
+(upstream supply names `vdd`/`vio`, the sample delay after an integration
+time change, threshold events after autosuspend, `proximity-near-level` 8),
+see [upstream-status.md](upstream-status.md#vcnl4200-fixes-branch-fixvcnl).
+`proximity-near-level` is in `in_proximity_raw` units, which the driver
+reports as counts / 16; the hardware event thresholds
+(`events/in_proximity_thresh_*_value`) are in counts.
