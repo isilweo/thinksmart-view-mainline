@@ -61,16 +61,31 @@ Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
 ## VCNL4200 fixes (branch `fix/vcnl`)
 
 `fix/vcnl` is `tsv/device` with the VCNL4200 commits redone (38 commits). It
-was reviewed with Codex (gpt-6.2-astra, three rounds) and independently with
-Claude Fable; findings of both were fixed. Built as package r52; not yet
-tested on a tablet.
+was reviewed with Codex (gpt-6.2-astra, four rounds) and independently with
+Claude Fable; findings of both were fixed. Built as package r54 and tested
+on unit 5 on 2026-11-25 (then put back on r39):
+
+- probe with `vdd`/`vio` (dummy `vled`); runtime PM `active` while
+  `alfred-wake` has events enabled, `suspended` 3 s after they are disabled
+  (r39 showed `suspended` with events enabled);
+- a threshold event enabled on the suspended sensor, without a read, fires
+  at once;
+- sample wait 369 ms at 8T and 47 ms at 1T (duty 1/1280); the first read
+  after an integration time change takes about 415 ms and already returns a
+  sample with the new settings. On r52 the first two reads after 8T to 1T
+  still returned the 8T value: the sensor completes the measurement in
+  progress, which r53 and later account for;
+- registers PS_CONF1 0x08c9 and PS_CONF3 0x0120 (as in the stock ADSP
+  driver); background 12-13 counts at 8T, as on r39;
+- a hand at 5-10 cm wakes the screen within a second after it was blanked
+  through the `alfred-wake` socket.
 
 | `fix/vcnl` | Commit | Change |
 |---|---|---|
 | 23 | dt-bindings: iio: light: vcnl4000: add regulators | Backport of upstream d674752564bf. |
 | 24 | iio: light: vcnl4000: add support for regulators | Backport of upstream 773a5dc613ed with 091e7a67a908 (`vdd`, `vio`, `vled`); replaces our `vdd`/`vddio` change and its undocumented 10 ms sleep. |
 | 25 | iio: light: vcnl4000: wait for the VCNL4040/4200 to start up after power-up | 2.5 ms before the first I²C access, as given in Vishay application notes 84307 and 84327. |
-| 26 | iio: light: vcnl4000: use low-power IR LED settings on the VCNL4200 | The PS sample period is computed in one place from the PS_IT and PS_Duty values written, after a successful write, and the wait restarts; the IIO write and the sample read run under the PS channel lock. |
+| 26 | iio: light: vcnl4000: use low-power IR LED settings on the VCNL4200 | The PS sample period is computed in one place from the PS_IT and PS_Duty values written, after a successful write; the first sample after a change waits for the old plus the new period; the IIO write and the sample read run under the PS channel lock. |
 | 27 | iio: light: vcnl4000: keep measuring while threshold events are enabled | Upstream bug since 7e87ab38eed0: a runtime PM reference is held while any threshold event is enabled; interrupts are disabled at init so that a driver rebind cannot unbalance it. Candidate for upstream on its own. |
 | 31 | arm64: dts: qcom: apq8053-lenovo-cd-18781y: enable the proximity sensor | `vio-supply` instead of `vddio-supply`, `proximity-near-level` 8 (128 counts, between the background of up to 60 and a hand at 800-1800), no `interrupt-names`, the explanation moved to the commit message. |
 
