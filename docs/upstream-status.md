@@ -41,7 +41,7 @@ Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
 | 2 | Venus HFI parser | Fixed on `fix/venus` (was: copies a property before checking its length against the remaining bytes). |
 | 4, 5, 7 | Venus encoder rate and buffers | Too broad for upstream as they are (4 replaces both limits when one is missing, 5 applies to all Venus 3.x encoders, 7 raises the minimum for all clients). |
 | 6 | Venus LTR mode | Good candidate after a test with LTR frames. |
-| 8 | Venus EOS drain | Fixed on `fix/venus` (was: state changed without `inst->lock`; the decoder can miss the end of stream). Still needs one more capture QBUF after the EOS. A separate, older bug hangs the decoder on a resolution change followed by EOS (see below). |
+| 8 | Venus EOS drain | Fixed on `fix/venus` (was: state changed without `inst->lock`; the decoder can miss the end of stream). Still needs one more capture QBUF after the EOS. A separate, older bug that hung the decoder after EOS is fixed on `fix/venus-drc` (see below). |
 | 9 | Venus decoder command PM | Fixed on `fix/venus` (was: the PM reference is dropped before the command is sent). |
 | 10, 13 | ccs pixel array sizes and default crop | Candidates after `v4l2-compliance`. |
 | 11 | ccs S5KC505A quirk | Needs agreement with the CCS maintainer. The register tables come from the stock camera library: the legal basis for using them must be settled before submitting or redistributing binaries built from them. |
@@ -155,22 +155,60 @@ Known limitations, left as they are (all in the commit messages):
   `parse_raw_formats()` still read before a full length check; `fill_caps()`
   skips a group that would exactly fill the table.
 
-### Hang on a resolution change followed by EOS (base bug, not fixed)
+### Hang after EOS: stale `delayed_process` entries (branch `fix/venus-drc`)
 
-Found while testing on unit 5 and reproduced on r39 without these fixes: an
+Found while testing on unit 5 and present on r39 without the fixes above: an
 H.264 RTP stream that changes from 640x480 to 1280x720, then EOS. The pipeline
-hangs in STREAMOFF of the output queue, in `mutex_lock(&inst->lock)` in
-`vdec_stop_streaming()`; no task that is alive holds the lock. The first time it
-also stalled the GPU (display frozen). H.265 did not hang in our runs. Likely
-cause, from code review by both reviewers: capture buffers kept on
-`inst->delayed_process` (READONLY references) are never unlinked when the
-capture queue is stopped and freed during the resolution change, and
-`delayed_process_buf_func()` then walks a stale list while holding
-`inst->lock` (at the hang a kworker on the `events` queue was running). A fix
-would unlink such buffers on capture STREAMOFF and in `vdec_buf_cleanup()`.
-A lockdep build to confirm it did not boot on unit 5 (recovered with
-`fastboot boot` of a rescue image from lk2nd and `apk` from the initramfs
-shell). Separate task.
+hung in STREAMOFF of the output queue, in `mutex_lock(&inst->lock)` in
+`vdec_stop_streaming()`, while a kworker on the `events` queue was running.
+
+Cause, confirmed on unit 5 with a diagnostic kernel (r70: `CONFIG_DEBUG_LIST`,
+soft lockup and hung task detectors, traces of the list; no lockdep):
+
+- a capture buffer queued while the firmware still holds a READONLY
+  reference waits on `inst->delayed_process` and stays in the m2m queue;
+- `vdec_buf_done()` can give such a buffer back to userspace (inferred to be
+  the empty LAST buffer of the drain), and STREAMOFF of the capture queue
+  returns all of them; neither takes it off the list;
+- userspace queues it again and `list_add_tail()` links a node that is still
+  the tail: the node points at itself and `delayed_process_buf_func()` loops
+  forever under `inst->lock`.
+
+With `CONFIG_DEBUG_LIST` this showed as `list_add double add` (new == prev)
+right after the drain in 4 of 5 runs (1 of 2 at a constant 1280x720, none of 4
+at 640x480; the resolution change is not required), and every EOS left a
+buffer on the list that `buf_cleanup` then freed.
+
+The fix is one commit on `fix/venus-drc` (on the merged `tsv/device`,
+`2f3a3cfd9`), "media: venus: vdec: unlink capture buffers from
+delayed_process on return": the node is initialised in `buf_init`; every
+queued buffer unlinks a stale node and is marked before it is published in
+the m2m queue; `vdec_buf_done()` clears the mark without `inst->lock`; the
+work sends only an entry whose mark it takes; STREAMOFF of the capture queue
+and `buf_cleanup` unlink the buffers. READONLY handling is unchanged. Reviewed
+with Codex (gpt-6.2-astra) and independently with Claude Fable, four rounds,
+until neither reported anything critical or important; the reviews removed a
+check of the vb2 state (racy), a clearing of READONLY after STREAMOFF (not
+backed by the traces) and two windows in the queueing order.
+
+Tests on unit 5 with the stream above and GStreamer `v4l2h264dec`:
+
+| Package | Kernel | Result |
+|---|---|---|
+| r39 | base | hangs (first run) |
+| r70 | `fix/venus` + `CONFIG_DEBUG_LIST`, no fix | `list_add double add` in 4 of 5 runs |
+| r71, r72, r74 | fix versions 1, 2, 4 + `CONFIG_DEBUG_LIST` | 22/22, 14/14, 15/15 runs end, no list warnings |
+| r75 | final fix, r39 config | 10/10 runs end, clean dmesg |
+
+On r74 also `glimagesink` in cage and a local encode/decode with EOS for
+H.264 and H.265 (120 of 120 frames). Unit 5 is back on r39.
+
+Left as they are (in the commit message): if the firmware released a held
+buffer and returned it right after, the work could still send it again while
+it is given back (the list stays intact); a stale READONLY after the buffer is
+returned; buffers held across STREAMOFF of the output queue are only sent at
+the next release event; `vdec_close()` cancels the work before the instance
+stops streaming, so the work can outlive close.
 
 ## Where the values come from
 
