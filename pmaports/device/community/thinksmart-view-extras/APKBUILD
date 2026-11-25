@@ -1,7 +1,7 @@
 # Lenovo ThinkSmart View (CD-18781Y) helpers for postmarketOS
 pkgname=thinksmart-view-extras
 pkgver=1
-pkgrel=0
+pkgrel=1
 pkgdesc="Lenovo ThinkSmart View: Wi-Fi boot guard, APSS watchdog for systemd, echo cancellation"
 url="https://github.com/isilweo/thinksmart-view-mainline"
 arch="noarch"
@@ -34,7 +34,7 @@ echo_cancel() {
 		"$subpkgdir"/usr/share/pipewire/pipewire.conf.d/60-echo-cancel.conf
 }
 sha512sums="
-03fa5ab3a9c8607e7e4f9a1aa94e3bc85289532a57958f9754d95e6fe3a35b8eed0df7e6070fb8d63cdfcd5c3d060d8b8ba60e3479b9ec026b4f894e40105070  wifi-guard
+89c6247722dc19d158876b0258895326eeef09f305f0875502112d442282d39dc0d58be8497b1d44fd94681a46aec05b57bf33876d75db3be919e172987400cd  wifi-guard
 8ba16467fbc35ada1a91689b3916928777156bf8a97ec1604fec3c75da0783cf10cf47a0b608aaca3e5ffe8d74e55f98cc063d801d8e891f36cd2fb320a725b1  wifi-guard.service
 c3a82e3bf98ff7485d684563e3c840716c7b2e20ddf128640c23a4cfc7e97e43613db9f3a6277372d55c8bdb22547d22da3393ae240728ba12d6df652150b6a8  80-apss-watchdog.conf
 ed042d8cef8e8525a02c43acdefb001791277e5b5d8138fb15f265d6233256ef70a3352c1c834813f913b14ae9ae4feb60748ed6e550b905004332745221c9f8  60-echo-cancel.conf
