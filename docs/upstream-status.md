@@ -32,16 +32,17 @@ A review of the whole series with Codex (OpenAI, gpt-6.2-astra) found these
 issues. Commit numbers refer to `tsv/device` as it is now. The VCNL4200
 issues (23-25, 29) are fixed on the local branch `fix/vcnl`, which is not in
 `tsv/device` yet; see [VCNL4200 fixes](#vcnl4200-fixes-branch-fixvcnl). The
-others are not fixed yet.
+Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
+[Venus fixes](#venus-fixes-branch-fixvenus). The others are not fixed yet.
 
 | Commits | Topic | State |
 |---|---|---|
 | 1, 3 | gcc-msm8953 HW_CTRL, Venus software power collapse | Candidates together; 3 should use one SoC flag instead of two `compatible` checks. |
-| 2 | Venus HFI parser | **Bug:** copies a property before checking its length against the remaining bytes. |
+| 2 | Venus HFI parser | Fixed on `fix/venus` (was: copies a property before checking its length against the remaining bytes). |
 | 4, 5, 7 | Venus encoder rate and buffers | Too broad for upstream as they are (4 replaces both limits when one is missing, 5 applies to all Venus 3.x encoders, 7 raises the minimum for all clients). |
 | 6 | Venus LTR mode | Good candidate after a test with LTR frames. |
-| 8 | Venus EOS drain | **Bug:** state changed without `inst->lock`; the decoder can miss the end of stream. |
-| 9 | Venus decoder command PM | **Bug:** the PM reference is dropped before the command is sent. |
+| 8 | Venus EOS drain | Fixed on `fix/venus` (was: state changed without `inst->lock`; the decoder can miss the end of stream). Still needs one more capture QBUF after the EOS. |
+| 9 | Venus decoder command PM | Fixed on `fix/venus` (was: the PM reference is dropped before the command is sent). |
 | 10, 13 | ccs pixel array sizes and default crop | Candidates after `v4l2-compliance`. |
 | 11 | ccs S5KC505A quirk | Needs agreement with the CCS maintainer. The register tables come from the stock camera library: the legal basis for using them must be settled before submitting or redistributing binaries built from them. |
 | 12, 14 | CAMSS sensor walk and link frequency | Both use "first subdev outside camss" as the boundary, which also stops at an external bridge; 12 needs a different design. |
@@ -88,6 +89,42 @@ Known limitations, left as they are:
   IIO is registered before runtime PM is enabled; runtime resume sets the PS
   `last_measurement` without the channel lock. Upstream has since reordered
   probe (de1839edfe36 and following).
+
+## Venus fixes (branch `fix/venus`)
+
+`fix/venus` is `tsv/device` with commits 2, 8 and 9 redone in place (still 36
+commits). Each fix was reviewed with Codex (gpt-6.2-astra) and independently
+with Claude Fable, in three rounds; a second version of 8 that completed the
+drain from a work item and flushed the firmware was dropped after review
+(work lifetime at close, a shared flush completion, ownership of buffers held
+back for READONLY references). Built as package r49
+(`fix/venus` + the three `tsv/debug` commits); not yet tested on a tablet.
+
+| `fix/venus` | Commit | Change |
+|---|---|---|
+| 2 | media: venus: hfi_parser: tolerate a truncated last capability entry | `parse_caps()` gets the remaining length and checks it before reading the entry count and before copying. Only the shape seen on VE.4.2 is accepted: SYS_INIT_DONE on HFI 3xx cut exactly half way into the last capability entry; that entry is dropped (`dev_info_once`). |
+| 8 | media: venus: vdec: complete the drain when EOS lands in a held buffer | The HFI callback only records the EOS (atomic flag, output picture buffer type only, never DPB); the next capture QBUF takes it under `inst->lock`, carries LAST and moves DRAIN to STOPPED. DEC_CMD_STOP enters DRAIN before sending the EOS (rolled back if sending fails) and sends nothing in STOPPED; STOP and START return -EBUSY in DRAIN (STOP also during a resolution change inside a drain); STREAMOFF drops the record. |
+| 9 | media: venus: vdec: resume the decoder before sending the EOS | `vdec_pm_get()` right before `hfi_session_process_buf()` and an autosuspend put right after, under `inst->lock`, only on the path that sends the EOS. |
+
+Known limitations, left as they are:
+
+- 8: the drain still needs one more capture QBUF after the EOS; a client that
+  holds all its free buffers until it sees LAST is not helped.
+- 8: STREAMOFF on the capture queue in DRAIN does not flush the firmware (as
+  before), so an EOS of the aborted drain can still end a later drain early.
+- 8: -EBUSY for a second STOP/START during a drain is new behaviour (the
+  decoder interface requires it; GStreamer `v4l2videodec` and FFmpeg send STOP
+  once).
+- 9: the reference covers sending the EOS only; the decoder then stays up for
+  the 2 s autosuspend delay. `venc_encoder_cmd()` has the same pattern and is
+  not changed (no hang seen there).
+- From the base driver: the found-buffer LAST path in `vdec_buf_done()` still
+  changes `codec_state` without the lock; `parse_profile_level()`,
+  `parse_alloc_mode()` and `parse_raw_formats()` still read before a full
+  length check; `fill_caps()` skips a group that would exactly fill the table.
+- Upstream would want 9 first (with `Fixes:` and `Cc: stable`), 1 split into
+  the bounds fix and the VE.4.2 quirk, and 8 split into the -EBUSY/state
+  changes and the EOS recovery.
 
 ## Where the values come from
 
