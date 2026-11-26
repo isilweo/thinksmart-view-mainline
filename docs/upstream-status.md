@@ -4,18 +4,20 @@ All changes live as commits in
 [isilweo/linux](https://github.com/isilweo/linux), a fork of
 [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux):
 
-- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 50 commits, one change
+- `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 56 commits, one change
   each. It includes the review fixes described below (since r80: the former
   local branches `fix/vcnl`, `fix/venus` and `fix/venus-drc`; since r93:
-  `fix/q6asm-wdt`); the numbers in the review table refer to the series as it
-  was in r39;
+  `fix/q6asm-wdt`; since r120: `fix/venus-sec` and `fix/camss-q6asm-sec`
+  from a security review); the numbers in the review table refer to the
+  series as it was in r39;
 - `tsv/debug`: `tsv/device` plus three local debug commits (ramoops and a
   Venus `fw_debug` parameter, qdsp6 dynamic debug traces, the SDIO probe stage
   on -110);
-- tag `tsv-v7.0.9-r93`: `tsv/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.0.9-r93` that runs on our tablets. Earlier
-  releases: `tsv-v7.0.9-r80` (Venus and VCNL4200 fixes) and `tsv-v7.0.9-r39`
-  (before the review fixes).
+- tag `tsv-v7.0.9-r120`: `tsv/debug` as built into the postmarketOS package
+  `linux-postmarketos-qcom-msm8953-7.0.9-r120` that runs on our tablets.
+  Earlier releases: `tsv-v7.0.9-r93` (q6asm backports, watchdog and Wi-Fi DT),
+  `tsv-v7.0.9-r80` (Venus and VCNL4200 fixes) and `tsv-v7.0.9-r39` (before the
+  review fixes).
 
 Only the final state was built and tested; the intermediate commits were not
 built one by one. The commits have no `Signed-off-by:` yet. Before upstream
@@ -214,6 +216,34 @@ it is given back (the list stays intact); a stale READONLY after the buffer is
 returned; buffers held across STREAMOFF of the output queue are only sent at
 the next release event; `vdec_close()` cancels the work before the instance
 stops streaming, so the work can outlive close.
+
+## Security review fixes (r120)
+
+A security review of the series (Claude, with Codex gpt-6.2-astra) looked for
+memory safety, values from firmware used without checks, and states that hang
+the SoC. The fixes were made on two branches, each reviewed with Codex and
+independently with Claude Fable until neither reported anything critical (two
+rounds for Venus, four for CAMSS and q6asm, plus a `/simplify` pass each), and
+tested on unit 5.
+
+| Commit | Change |
+|---|---|
+| media: venus: vdec: complete the drain when EOS lands in a held buffer | Fixup: a failed capture start restores the old state after every error, and a LAST outside a drain is no longer recorded. |
+| media: venus: venc: keep the encoder up while a session is streaming | The encoder keeps its runtime PM reference from the start of the second queue to the first STREAMOFF. On r93, cutting the vcodec clocks under a live session (autosuspend 2 s after the last buffer, or stop/unload/deinit after it) hung the SoC until the watchdog reset it; reproduced on unit 5 several times. Test: 384x256 NV12 to H.264, 4 frames, then 2.5-3 s without buffers; 40/40 runs on r101 and r103, against hangs on r93. |
+| media: venus: venc: enter DRAIN before sending the EOS | From reading the code: the state was set after sending, also when sending failed. |
+| media: venus: vdec: keep the delayed work off while closing | `disable_work_sync()` in `vdec_close()`, so the work cannot be queued again after close. Mainline still has `cancel_work_sync()`. |
+| media: venus: vdec: keep the decoder up while OUTPUT is streaming | The decoder keeps its reference while the input queue streams. On r93 it hung the SoC 2 of 2 times when no input came for 3 s after the stream header, before the capture queue was set up; other states (decoding, after EOS, resolution change, seek, STREAMOFF) suspended safely. On r103: 80/80 decoder runs in ten states, resolution change with silence 10/10, resolution change and EOS over RTP 10/10, encoder 40/40; after each run both suspend, clean dmesg. |
+| media: qcom: camss: vfe-4-1: program the buffer size in frame based mode | Fixup: the RDI height limit (4096 lines in frame based mode) is enforced in try_fmt and on the VFE sink pad instead of a `WARN_ON_ONCE` at stream start; 1304x5000 from the CSID test generator used to warn, now the format is clamped and STREAMON fails with -EPIPE. |
+| ASoC: qcom: q6asm: validate the buffer token of data done events | The buffer index from the DSP is checked against the number of periods under the client lock before it is used. Mainline has the same bug. |
+| ASoC: qcom: q6asm-dai: stop queueing capture reads after STOP | READ_DONE queues the next read only while the PCM is running, paused, or suspended from one of those states. On r93 about 50 reads per second still went to the DSP after `snd_pcm_drop`; on r113 none. Mainline has the same bug. |
+
+Both Venus PM changes apply to every SoC, not only MSM8953; upstream may want
+them limited to SoCs with software power collapse. Not covered: system sleep
+(`pm_runtime_force_suspend()` still cuts the clocks) and firmware recovery
+during a streaming session. Older issues found by the review and left as they
+are (in the commit messages): use after free windows from the Venus IRQ
+thread and in the q6asm callback after close, buffers partly sent to the
+firmware when a start fails, and the compress path sending WRITE after STOP.
 
 ## Where the values come from
 

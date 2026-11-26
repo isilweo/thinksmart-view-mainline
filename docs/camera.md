@@ -8,7 +8,9 @@
 - CAMSS on MSM8953: its own CSIPHY and VFE clock tables, the VFE VBIF region
   described in the DT, per-SoC QoS/DS settings and UB size, write master
   geometry in frame based mode, and the link frequency read from the
-  transmitter subdev instead of the pixel array.
+  transmitter subdev instead of the pixel array. Since r120 the RDI height
+  limit of frame based mode (4096 lines) is checked in try_fmt instead of a
+  warning at stream start.
 
 Result: 1304x980 at 30 fps without dropped frames, through the libcamera
 SoftISP with GPU debayer, using about one CPU core. In a dark room the AGC

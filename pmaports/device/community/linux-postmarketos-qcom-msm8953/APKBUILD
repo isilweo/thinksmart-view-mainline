@@ -1,12 +1,12 @@
 # Kernel config based on: defconfig, msm8953.config, and device configs
 # ThinkSmart View build: derived from the postmarketOS pmaports package of the
-# same name (v26.06). The patch is `git diff v7.0.9-r0 tsv-v7.0.9-r93` of
+# same name (v26.06). The patch is `git diff v7.0.9-r0 tsv-v7.0.9-r120` of
 # https://github.com/isilweo/linux (branches tsv/device and tsv/debug).
 maintainer="Lech Piekarski <isilweo@gmail.com>"
 _flavor="postmarketos-qcom-msm8953"
 pkgname=linux-$_flavor
 pkgver=7.0.9
-pkgrel=93
+pkgrel=120
 pkgdesc="Close to mainline linux kernel for Qualcomm Snapdragon MSM8953"
 arch="aarch64"
 _carch="arm64"
@@ -34,7 +34,7 @@ _tag="$pkgver-r0"
 source="
 	$pkgname-v$_tag.tar.gz::$url/archive/v$_tag.tar.gz
 	config-$_flavor.aarch64
-	tsv-v7.0.9-r93.patch
+	tsv-v7.0.9-r120.patch
 "
 builddir="$srcdir/linux-$_tag"
 
@@ -67,5 +67,5 @@ package() {
 sha512sums="
 660bb93c2d19efe27a0c19a795801cbbf092f19589b96a857e320345b406a887498a0ab6b0e435b3ef5c244f5c193f82c8a61876853f3a6c1cf0932632d00c5f  linux-postmarketos-qcom-msm8953-v7.0.9-r0.tar.gz
 a225d594edde81b5f096689acdbd23e2ef64c099d4bd60bc9d3c054160e408650f8c0f810d66e22d48f928ea172b764a3e25b6d8f8c538e782f4d40686dae12b  config-postmarketos-qcom-msm8953.aarch64
-cba1106e1158110db689997e3820990569cf0d058d5ea1e6fc65d40e59d661b6cdfdc3b129db48f8f6ce807a2a7b2fda3916c7c42b59f4350620c693796b0214  tsv-v7.0.9-r93.patch
+703fe1ef81e71cb1d3e5c65104a8dab72d5fcd420a9a55a433b99d20ce7340244400ac08024eb12115d1ed1df135a85c4323119d104b1e54529de821c0a203c0  tsv-v7.0.9-r120.patch
 "

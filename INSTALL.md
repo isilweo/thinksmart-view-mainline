@@ -59,8 +59,8 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
          "$(pmbootstrap config aports)"/device/community/
    cp -r pmaports/temp/libcamera pmaports/temp/pipewire "$(pmbootstrap config aports)"/temp/
    ```
-   - `linux-postmarketos-qcom-msm8953` (7.0.9-r93) is the postmarketOS kernel
-     package with one patch, `git diff v7.0.9-r0 tsv-v7.0.9-r93` of
+   - `linux-postmarketos-qcom-msm8953` (7.0.9-r120) is the postmarketOS kernel
+     package with one patch, `git diff v7.0.9-r0 tsv-v7.0.9-r120` of
      [isilweo/linux](https://github.com/isilweo/linux), and the matching
      config (APSS watchdog included);
    - `libcamera` is libcamera 0.8.0 (pmaports master `temp/libcamera`) with the
@@ -162,7 +162,7 @@ sudo resize2fs "$ROOT"                          # grow the root fs to the end of
 
 ## 5. Check
 
-- `apk info -v linux-postmarketos-qcom-msm8953` shows `7.0.9-r93` (`uname -r`
+- `apk info -v linux-postmarketos-qcom-msm8953` shows `7.0.9-r120` (`uname -r`
   says `7.0.9-msm8953` for any build); `systemctl --failed` is empty.
 - Wi-Fi: `cat /sys/bus/mmc/devices/mmc1:0001/power/runtime_suspended_time` is
   more than zero (the card was powered off before the driver probed);

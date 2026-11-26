@@ -1082,7 +1082,7 @@ index 392c97109..7d7aaca45 100644
  
  #endif /* __CCS_QUIRK__ */
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-index 9cf1ccdb2..b8bddf7b3 100644
+index 9cf1ccdb2..ba4346423 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 @@ -128,6 +128,14 @@
@@ -1124,13 +1124,14 @@ index 9cf1ccdb2..b8bddf7b3 100644
  }
  
  static inline void vfe_reg_clr(struct vfe_device *vfe, u32 reg, u32 clr_bits)
-@@ -279,6 +293,29 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
+@@ -279,6 +293,27 @@ static void vfe_wm_frame_based(struct vfe_device *vfe, u8 wm, u8 enable)
  			1 << VFE_0_BUS_IMAGE_MASTER_n_WR_CFG_FRM_BASED_SHIFT);
  }
  
-+/* MSM8953 needs the buffer geometry in frame based mode as well */
-+#define VFE_0_WR_BUFFER_CFG_MAX_HEIGHT	4096
-+
++/*
++ * MSM8953 needs the buffer geometry in frame based mode as well. The height
++ * field is 12 bits wide, rdi_max_height in vfe_res_8x53 keeps it in range.
++ */
 +static void vfe_wm_frame_size(struct vfe_device *vfe, u8 wm,
 +			      struct v4l2_pix_format_mplane *pix)
 +{
@@ -1138,9 +1139,6 @@ index 9cf1ccdb2..b8bddf7b3 100644
 +	u32 reg;
 +
 +	if (vfe->camss->res->version != CAMSS_8x53)
-+		return;
-+
-+	if (WARN_ON_ONCE(pix->height > VFE_0_WR_BUFFER_CFG_MAX_HEIGHT))
 +		return;
 +
 +	reg = 0x3;
@@ -1154,7 +1152,7 @@ index 9cf1ccdb2..b8bddf7b3 100644
  static void vfe_get_wm_sizes(struct v4l2_pix_format_mplane *pix, u8 plane,
  			     u16 *width, u16 *height, u16 *bytesperline)
  {
-@@ -736,6 +773,11 @@ static void vfe_set_qos(struct vfe_device *vfe)
+@@ -736,6 +771,11 @@ static void vfe_set_qos(struct vfe_device *vfe)
  	u32 val7 = VFE_0_BUS_BDG_QOS_CFG_7_CFG;
  	int ret;
  
@@ -1166,7 +1164,7 @@ index 9cf1ccdb2..b8bddf7b3 100644
  	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_0);
  	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_1);
  	writel_relaxed(val, vfe->base + VFE_0_BUS_BDG_QOS_CFG_2);
-@@ -746,7 +788,7 @@ static void vfe_set_qos(struct vfe_device *vfe)
+@@ -746,7 +786,7 @@ static void vfe_set_qos(struct vfe_device *vfe)
  	writel_relaxed(val7, vfe->base + VFE_0_BUS_BDG_QOS_CFG_7);
  
  	/* SoC-specific VBIF settings */
@@ -1175,7 +1173,7 @@ index 9cf1ccdb2..b8bddf7b3 100644
  		ret = vfe_vbif_apply_settings(vfe);
  		if (ret < 0) {
  			dev_err_ratelimited(vfe->camss->dev,
-@@ -758,7 +800,14 @@ static void vfe_set_qos(struct vfe_device *vfe)
+@@ -758,7 +798,14 @@ static void vfe_set_qos(struct vfe_device *vfe)
  
  static void vfe_set_ds(struct vfe_device *vfe)
  {
@@ -1191,7 +1189,7 @@ index 9cf1ccdb2..b8bddf7b3 100644
  }
  
  static void vfe_set_cgc_override(struct vfe_device *vfe, u8 wm, u8 enable)
-@@ -986,6 +1035,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
+@@ -986,6 +1033,7 @@ static const struct vfe_hw_ops_gen1 vfe_ops_gen1_4_1 = {
  	.set_xbar_cfg = vfe_set_xbar_cfg,
  	.wm_enable = vfe_wm_enable,
  	.wm_frame_based = vfe_wm_frame_based,
@@ -1232,10 +1230,16 @@ index b2f7d855d..0887693b9 100644
  	/* On VFE4.8 the ub-size is the same on both instances */
  	return MSM_VFE_VFE0_UB_SIZE_RDI;
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
-index d84a375e3..aba79cf37 100644
+index d84a375e3..ecad9e854 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
-@@ -176,7 +176,7 @@ static int vfe_enable_output(struct vfe_line *line)
+@@ -171,15 +171,21 @@ static int vfe_enable_output(struct vfe_line *line)
+ 	struct vfe_output *output = &line->output;
+ 	const struct vfe_hw_ops *ops = vfe->res->hw_ops;
+ 	struct media_pad *sensor_pad;
++	u32 height = line->video_out.active_fmt.fmt.pix_mp.height;
+ 	unsigned long flags;
+ 	unsigned int frame_skip = 0;
  	unsigned int i;
  	u16 ub_size;
  
@@ -1244,7 +1248,15 @@ index d84a375e3..aba79cf37 100644
  	if (!ub_size)
  		return -EINVAL;
  
-@@ -245,6 +245,9 @@ static int vfe_enable_output(struct vfe_line *line)
++	if (line->id != VFE_LINE_PIX && height > vfe_rdi_max_height(vfe)) {
++		dev_err(vfe->camss->dev, "RDI frame height %u too large\n", height);
++		return -EINVAL;
++	}
++
+ 	sensor_pad = camss_find_sensor_pad(&line->subdev.entity);
+ 	if (sensor_pad) {
+ 		struct v4l2_subdev *subdev =
+@@ -245,6 +251,9 @@ static int vfe_enable_output(struct vfe_line *line)
  		vfe->ops_gen1->wm_set_ub_cfg(vfe, output->wm_idx[0],
  					    (ub_size + 1) * output->wm_idx[0], ub_size);
  		vfe->ops_gen1->wm_frame_based(vfe, output->wm_idx[0], 1);
@@ -1313,10 +1325,21 @@ index 911f8da02..232c82dde 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe.c b/drivers/media/platform/qcom/camss/camss-vfe.c
-index 64518915e..c333439b7 100644
+index 64518915e..466610da2 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe.c
-@@ -1924,11 +1924,17 @@ int msm_vfe_subdev_init(struct camss *camss, struct vfe_device *vfe,
+@@ -1443,7 +1443,9 @@ static void vfe_try_format(struct vfe_line *line,
+ 			fmt->code = MEDIA_BUS_FMT_UYVY8_1X16;
+ 
+ 		fmt->width = clamp_t(u32, fmt->width, 1, 8191);
+-		fmt->height = clamp_t(u32, fmt->height, 1, 8191);
++		fmt->height = clamp_t(u32, fmt->height, 1,
++				      line->id == VFE_LINE_PIX ? 8191 :
++				      vfe_rdi_max_height(to_vfe(line)));
+ 
+ 		fmt->field = V4L2_FIELD_NONE;
+ 		fmt->colorspace = V4L2_COLORSPACE_SRGB;
+@@ -1924,11 +1926,17 @@ int msm_vfe_subdev_init(struct camss *camss, struct vfe_device *vfe,
  	}
  
  	if (vfe->res->has_vbif) {
@@ -1339,11 +1362,52 @@ index 64518915e..c333439b7 100644
  		}
  	}
  
+@@ -2181,6 +2189,7 @@ int msm_vfe_register_entities(struct vfe_device *vfe,
+ 		video_out->ops = &vfe->video_ops;
+ 		video_out->bpl_alignment = vfe_bpl_align(vfe);
+ 		video_out->line_based = 0;
++		video_out->max_height = vfe_rdi_max_height(vfe);
+ 		if (i == VFE_LINE_PIX) {
+ 			video_out->bpl_alignment = 16;
+ 			video_out->line_based = 1;
+diff --git a/drivers/media/platform/qcom/camss/camss-vfe.h b/drivers/media/platform/qcom/camss/camss-vfe.h
+index a2188a81b..b1dd247eb 100644
+--- a/drivers/media/platform/qcom/camss/camss-vfe.h
++++ b/drivers/media/platform/qcom/camss/camss-vfe.h
+@@ -138,6 +138,7 @@ struct vfe_subdev_resources {
+ 	char *pd_name;
+ 	bool has_vbif;
+ 	char *vbif_name;
++	u16 rdi_max_height; /* 0 means CAMSS_FRAME_MAX_HEIGHT_RDI */
+ 	const struct vfe_hw_ops *hw_ops;
+ 	const struct camss_formats *formats_rdi;
+ 	const struct camss_formats *formats_pix;
+@@ -275,6 +276,12 @@ bool vfe_is_lite(struct vfe_device *vfe);
+  * Return vfe hw version
+  */
+ u32 vfe_hw_version(struct vfe_device *vfe);
++
++static inline u32 vfe_rdi_max_height(const struct vfe_device *vfe)
++{
++	return vfe->res->rdi_max_height ?: CAMSS_FRAME_MAX_HEIGHT_RDI;
++}
++
+ /*
+  * vfe_enable - Enable streaming on VFE line
+  * @line: VFE line
 diff --git a/drivers/media/platform/qcom/camss/camss-video.c b/drivers/media/platform/qcom/camss/camss-video.c
-index 831486e14..507ab09d9 100644
+index 831486e14..a7f326caa 100644
 --- a/drivers/media/platform/qcom/camss/camss-video.c
 +++ b/drivers/media/platform/qcom/camss/camss-video.c
-@@ -275,6 +275,10 @@ static int video_start_streaming(struct vb2_queue *q, unsigned int count)
+@@ -21,7 +21,6 @@
+ #define CAMSS_FRAME_MIN_WIDTH		1
+ #define CAMSS_FRAME_MAX_WIDTH		8191
+ #define CAMSS_FRAME_MIN_HEIGHT		1
+-#define CAMSS_FRAME_MAX_HEIGHT_RDI	8191
+ #define CAMSS_FRAME_MAX_HEIGHT_PIX	4096
+ 
+ /* -----------------------------------------------------------------------------
+@@ -275,6 +274,10 @@ static int video_start_streaming(struct vb2_queue *q, unsigned int count)
  		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
  		if (ret < 0 && ret != -ENOIOCTLCMD)
  			goto error;
@@ -1354,7 +1418,7 @@ index 831486e14..507ab09d9 100644
  	}
  
  	return 0;
-@@ -316,6 +320,9 @@ static void video_stop_streaming(struct vb2_queue *q)
+@@ -316,6 +319,9 @@ static void video_stop_streaming(struct vb2_queue *q)
  			dev_err(video->camss->dev, "Video pipeline stop failed: %d\n", ret);
  			return;
  		}
@@ -1364,8 +1428,47 @@ index 831486e14..507ab09d9 100644
  	}
  
  	video_device_pipeline_stop(vdev);
+@@ -435,7 +441,7 @@ static int video_enum_framesizes(struct file *file, void *fh,
+ 	fsize->stepwise.max_width = CAMSS_FRAME_MAX_WIDTH;
+ 	fsize->stepwise.min_height = CAMSS_FRAME_MIN_HEIGHT;
+ 	fsize->stepwise.max_height = (video->line_based) ?
+-		CAMSS_FRAME_MAX_HEIGHT_PIX : CAMSS_FRAME_MAX_HEIGHT_RDI;
++		CAMSS_FRAME_MAX_HEIGHT_PIX : video->max_height;
+ 	fsize->stepwise.step_width = 1;
+ 	fsize->stepwise.step_height = 1;
+ 
+@@ -489,7 +495,7 @@ static int __video_try_fmt(struct camss_video *video, struct v4l2_format *f)
+ 
+ 	pix_mp->pixelformat = fi->pixelformat;
+ 	pix_mp->width = clamp_t(u32, width, 1, CAMSS_FRAME_MAX_WIDTH);
+-	pix_mp->height = clamp_t(u32, height, 1, CAMSS_FRAME_MAX_HEIGHT_RDI);
++	pix_mp->height = clamp_t(u32, height, 1, video->max_height);
+ 	pix_mp->num_planes = fi->planes;
+ 	for (i = 0; i < pix_mp->num_planes; i++) {
+ 		bpl = pix_mp->width / fi->hsub[i].numerator *
+diff --git a/drivers/media/platform/qcom/camss/camss-video.h b/drivers/media/platform/qcom/camss/camss-video.h
+index d3e56e240..14f1c5ede 100644
+--- a/drivers/media/platform/qcom/camss/camss-video.h
++++ b/drivers/media/platform/qcom/camss/camss-video.h
+@@ -27,6 +27,8 @@ struct camss_buffer {
+ 
+ struct camss_video;
+ 
++#define CAMSS_FRAME_MAX_HEIGHT_RDI	8191
++
+ struct camss_video_ops {
+ 	int (*queue_buffer)(struct camss_video *vid, struct camss_buffer *buf);
+ 	int (*flush_buffers)(struct camss_video *vid,
+@@ -46,6 +48,7 @@ struct camss_video {
+ 	struct mutex q_lock;
+ 	unsigned int bpl_alignment;
+ 	unsigned int line_based;
++	unsigned int max_height; /* set by the VFE */
+ 	const struct camss_format_info *formats;
+ 	unsigned int nformats;
+ };
 diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
-index eba1fa7a8..d7eaf779c 100644
+index eba1fa7a8..9cbff8c7b 100644
 --- a/drivers/media/platform/qcom/camss/camss.c
 +++ b/drivers/media/platform/qcom/camss/camss.c
 @@ -390,6 +390,59 @@ static const struct camss_subdev_resources ispif_res_8x53 = {
@@ -1440,16 +1543,17 @@ index eba1fa7a8..d7eaf779c 100644
  				{ 0 },
  				{ 0 },
  				{ 0 } },
-@@ -411,6 +463,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+@@ -411,6 +463,9 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
  			.line_num = 3,
  			.has_pd = true,
  			.pd_name = "vfe0",
 +			.has_vbif = true,
 +			.vbif_name = "vfe0_vbif",
++			.rdi_max_height = 4096,
  			.hw_ops = &vfe_ops_4_1,
  			.formats_rdi = &vfe_formats_rdi_8x16,
  			.formats_pix = &vfe_formats_pix_8x16
-@@ -425,9 +479,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+@@ -425,9 +480,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
  		.clock_rate = { { 0 },
  				{ 0 },
  				{ 0 },
@@ -1461,16 +1565,17 @@ index eba1fa7a8..d7eaf779c 100644
  				{ 0 },
  				{ 0 },
  				{ 0 } },
-@@ -437,6 +490,8 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
+@@ -437,6 +491,9 @@ static const struct camss_subdev_resources vfe_res_8x53[] = {
  			.line_num = 3,
  			.has_pd = true,
  			.pd_name = "vfe1",
 +			.has_vbif = true,
 +			.vbif_name = "vfe1_vbif",
++			.rdi_max_height = 4096,
  			.hw_ops = &vfe_ops_4_1,
  			.formats_rdi = &vfe_formats_rdi_8x16,
  			.formats_pix = &vfe_formats_pix_8x16
-@@ -4271,24 +4326,50 @@ struct media_pad *camss_find_sensor_pad(struct media_entity *entity)
+@@ -4271,24 +4328,50 @@ struct media_pad *camss_find_sensor_pad(struct media_entity *entity)
  	}
  }
  
@@ -1527,7 +1632,7 @@ index eba1fa7a8..d7eaf779c 100644
  }
  
  /*
-@@ -5102,11 +5183,11 @@ static const struct camss_resources sdm450_resources = {
+@@ -5102,11 +5185,11 @@ static const struct camss_resources sdm450_resources = {
  	.version = CAMSS_8x53,
  	.icc_res = icc_res_8x53,
  	.icc_path_num = ARRAY_SIZE(icc_res_8x53),
@@ -1541,7 +1646,7 @@ index eba1fa7a8..d7eaf779c 100644
  	.csid_num = MIN(2, ARRAY_SIZE(csid_res_8x53)),
  	.vfe_num = ARRAY_SIZE(vfe_res_8x53),
  };
-@@ -5115,11 +5196,11 @@ static const struct camss_resources msm8953_resources = {
+@@ -5115,11 +5198,11 @@ static const struct camss_resources msm8953_resources = {
  	.version = CAMSS_8x53,
  	.icc_res = icc_res_8x53,
  	.icc_path_num = ARRAY_SIZE(icc_res_8x53),
@@ -1818,7 +1923,7 @@ index f0269524a..e0271461f 100644
  		writel(0, ctrl);
  	else
 diff --git a/drivers/media/platform/qcom/venus/vdec.c b/drivers/media/platform/qcom/venus/vdec.c
-index 7a3247dcb..f6952509a 100644
+index 7a3247dcb..3b82a687e 100644
 --- a/drivers/media/platform/qcom/venus/vdec.c
 +++ b/drivers/media/platform/qcom/venus/vdec.c
 @@ -545,12 +545,44 @@ static int vdec_subscribe_event(struct v4l2_fh *fh,
@@ -1982,7 +2087,7 @@ index 7a3247dcb..f6952509a 100644
  	int ret;
  
  	if (!inst->streamon_out)
-@@ -1081,9 +1123,24 @@ static int vdec_start_capture(struct venus_inst *inst)
+@@ -1081,31 +1123,44 @@ static int vdec_start_capture(struct venus_inst *inst)
  	if (ret)
  		goto err;
  
@@ -1998,25 +2103,25 @@ index 7a3247dcb..f6952509a 100644
 +	inst->sequence_cap = 0;
 +
  	ret = hfi_session_continue(inst);
--	if (ret)
-+	if (ret) {
-+		/* nothing reached the firmware, so nothing can have answered */
-+		inst->codec_state = old_state;
-+		inst->sequence_cap = old_sequence;
- 		goto free_dpb_bufs;
-+	}
+ 	if (ret)
+-		goto free_dpb_bufs;
++		goto restore_state;
  
  	ret = venus_helper_queue_dpb_bufs(inst);
  	if (ret)
-@@ -1093,15 +1150,8 @@ static int vdec_start_capture(struct venus_inst *inst)
- 	if (ret)
- 		goto free_dpb_bufs;
+-		goto free_dpb_bufs;
++		goto restore_state;
  
+ 	ret = venus_helper_process_initial_cap_bufs(inst);
+ 	if (ret)
+-		goto free_dpb_bufs;
+-
 -	inst->codec_state = VENUS_DEC_STATE_DECODING;
 -
 -	if (inst->drain_active)
 -		inst->codec_state = VENUS_DEC_STATE_DRAIN;
--
++		goto restore_state;
+ 
  	inst->streamon_cap = 1;
 -	inst->sequence_cap = 0;
  	inst->reconfig = false;
@@ -2024,7 +2129,66 @@ index 7a3247dcb..f6952509a 100644
  
  	return 0;
  
-@@ -1278,6 +1328,9 @@ static int vdec_stop_output(struct venus_inst *inst)
+-free_dpb_bufs:
++restore_state:
++	/*
++	 * Go back to the old state, so that the next STREAMON reconfigures
++	 * again instead of finding DECODING or DRAIN with nothing started.
++	 * A LAST that ended the drain before this check leaves STOPPED;
++	 * either way the next start reconfigures.
++	 */
++	if (inst->codec_state != VENUS_DEC_STATE_STOPPED)
++		inst->codec_state = old_state;
++	inst->sequence_cap = old_sequence;
+ 	venus_helper_free_dpb_bufs(inst);
+ err:
+ 	return ret;
+@@ -1180,7 +1235,9 @@ static int vdec_start_output(struct venus_inst *inst)
+ 	inst->codec_state = VENUS_DEC_STATE_INIT;
+ 
+ done:
+-	inst->streamon_out = 1;
++	/* only a started queue holds the reference, see vdec_start_streaming() */
++	if (!ret)
++		inst->streamon_out = 1;
+ 	return ret;
+ }
+ 
+@@ -1193,7 +1250,14 @@ static int vdec_start_streaming(struct vb2_queue *q, unsigned int count)
+ 
+ 	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+ 		ret = vdec_start_capture(inst);
++		if (ret)
++			goto error;
+ 	} else {
++		/*
++		 * Held while OUTPUT streams, until vdec_stop_streaming(): on
++		 * MSM8953 cutting the clocks while the firmware holds input,
++		 * e.g. waiting for CAPTURE after the header, hangs the SoC.
++		 */
+ 		ret = vdec_pm_get(inst);
+ 		if (ret)
+ 			goto error;
+@@ -1202,16 +1266,11 @@ static int vdec_start_streaming(struct vb2_queue *q, unsigned int count)
+ 		if (ret)
+ 			goto put_power;
+ 
+-		ret = vdec_pm_put(inst, true);
+-		if (ret)
+-			goto error;
+-
+ 		ret = vdec_start_output(inst);
++		if (ret)
++			goto put_power;
+ 	}
+ 
+-	if (ret)
+-		goto error;
+-
+ 	mutex_unlock(&inst->lock);
+ 	return 0;
+ 
+@@ -1278,6 +1337,9 @@ static int vdec_stop_output(struct venus_inst *inst)
  		break;
  	}
  
@@ -2034,7 +2198,7 @@ index 7a3247dcb..f6952509a 100644
  	return ret;
  }
  
-@@ -1290,10 +1343,12 @@ static void vdec_stop_streaming(struct vb2_queue *q)
+@@ -1290,25 +1352,30 @@ static void vdec_stop_streaming(struct vb2_queue *q)
  
  	mutex_lock(&inst->lock);
  
@@ -2049,7 +2213,30 @@ index 7a3247dcb..f6952509a 100644
  
  	venus_helper_buffers_done(inst, q->type, VB2_BUF_STATE_ERROR);
  
-@@ -1363,6 +1418,7 @@ static void vdec_buf_cleanup(struct vb2_buffer *vb)
+ 	inst->session_error = 0;
+ 
+-	if (ret)
+-		goto unlock;
+-
++	/*
++	 * OUTPUT is stopped also when the flush failed (vb2 stops a queue
++	 * only once), and its reference goes below; CAPTURE as before.
++	 */
+ 	if (q->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+ 		inst->streamon_out = 0;
+-	else
++	else if (!ret)
+ 		inst->streamon_cap = 0;
+ 
+-unlock:
+ 	mutex_unlock(&inst->lock);
++
++	if (q->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
++		vdec_pm_put(inst, true);
+ }
+ 
+ static void vdec_session_release(struct venus_inst *inst)
+@@ -1363,6 +1430,7 @@ static void vdec_buf_cleanup(struct vb2_buffer *vb)
  	struct venus_buffer *buf = to_venus_buffer(vbuf);
  
  	mutex_lock(&inst->lock);
@@ -2057,7 +2244,7 @@ index 7a3247dcb..f6952509a 100644
  	if (vb->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
  		if (!list_empty(&inst->registeredbufs))
  			list_del_init(&buf->reg_list);
-@@ -1378,13 +1434,23 @@ static void vdec_vb2_buf_queue(struct vb2_buffer *vb)
+@@ -1378,13 +1446,23 @@ static void vdec_vb2_buf_queue(struct vb2_buffer *vb)
  	struct venus_inst *inst = vb2_get_drv_priv(vb->vb2_queue);
  	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
  	static const struct v4l2_event eos = { .type = V4L2_EVENT_EOS };
@@ -2083,18 +2270,20 @@ index 7a3247dcb..f6952509a 100644
  		vbuf->flags |= V4L2_BUF_FLAG_LAST;
  		vbuf->sequence = inst->sequence_cap++;
  		vbuf->field = V4L2_FIELD_NONE;
-@@ -1429,9 +1495,22 @@ static void vdec_buf_done(struct venus_inst *inst, unsigned int buf_type,
+@@ -1429,9 +1507,24 @@ static void vdec_buf_done(struct venus_inst *inst, unsigned int buf_type,
  	vbuf = venus_helper_find_buf(inst, type, tag);
  	if (!vbuf) {
  		venus_helper_change_dpb_owner(inst, vbuf, type, buf_type, tag);
 +		/*
 +		 * LAST came in a picture buffer the driver does not hold, e.g.
-+		 * a READONLY reference kept by userspace. Record it; the next
-+		 * capture buffer queued while draining ends the drain. No
-+		 * inst->lock here: stop_streaming holds it waiting for a flush.
++		 * a READONLY reference kept by userspace. Record it if it ends
++		 * a drain, as a found buffer would; the next capture buffer
++		 * queued ends the drain. No inst->lock here: stop_streaming
++		 * holds it waiting for a flush.
 +		 */
 +		if (buf_type == inst->opb_buftype &&
-+		    (flags & V4L2_BUF_FLAG_LAST))
++		    (flags & V4L2_BUF_FLAG_LAST) &&
++		    inst->codec_state == VENUS_DEC_STATE_DRAIN)
 +			atomic_set(&inst->eos_last_pending, 1);
  		return;
  	}
@@ -2106,8 +2295,21 @@ index 7a3247dcb..f6952509a 100644
  	vbuf->flags = flags;
  	vbuf->field = V4L2_FIELD_NONE;
  	vb = &vbuf->vb2_buf;
+@@ -1762,7 +1855,11 @@ static int vdec_close(struct file *file)
+ 	struct venus_inst *inst = to_inst(file);
+ 
+ 	vdec_pm_get(inst);
+-	cancel_work_sync(&inst->delayed_process_work);
++	/*
++	 * Tearing the session down below makes the firmware release buffer
++	 * references, which would queue the work again; keep it off.
++	 */
++	disable_work_sync(&inst->delayed_process_work);
+ 	venus_close_common(inst, file);
+ 	ida_destroy(&inst->dpb_ids);
+ 	vdec_pm_put(inst, false);
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index efcec720d..3144322d7 100644
+index efcec720d..efe2887af 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
 @@ -473,6 +473,7 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
@@ -2142,7 +2344,22 @@ index efcec720d..3144322d7 100644
  
  	return 0;
  }
-@@ -691,6 +700,16 @@ static int venc_set_properties(struct venus_inst *inst)
+@@ -554,9 +563,12 @@ venc_encoder_cmd(struct file *file, void *fh, struct v4l2_encoder_cmd *cmd)
+ 		else
+ 			fdata.device_addr = 0xdeadb000;
+ 
+-		ret = hfi_session_process_buf(inst, &fdata);
+-
++		/* before sending, so that a quick LAST finds the state set */
+ 		inst->enc_state = VENUS_ENC_STATE_DRAIN;
++
++		ret = hfi_session_process_buf(inst, &fdata);
++		if (ret && inst->enc_state == VENUS_ENC_STATE_DRAIN)
++			inst->enc_state = VENUS_ENC_STATE_ENCODING;
+ 	} else if (cmd->cmd == V4L2_ENC_CMD_START) {
+ 		if (inst->enc_state == VENUS_ENC_STATE_DRAIN) {
+ 			ret = -EBUSY;
+@@ -691,6 +703,16 @@ static int venc_set_properties(struct venus_inst *inst)
  	if (ret)
  		return ret;
  
@@ -2159,7 +2376,7 @@ index efcec720d..3144322d7 100644
  	if (inst->fmt_cap->pixfmt == V4L2_PIX_FMT_H264) {
  		struct hfi_h264_vui_timing_info info;
  		struct hfi_h264_entropy_control entropy;
-@@ -946,13 +965,16 @@ static int venc_set_properties(struct venus_inst *inst)
+@@ -946,13 +968,16 @@ static int venc_set_properties(struct venus_inst *inst)
  	if (ret)
  		return ret;
  
@@ -2183,7 +2400,7 @@ index efcec720d..3144322d7 100644
  
  	switch (inst->hfi_codec) {
  	case HFI_VIDEO_CODEC_H264:
-@@ -1159,7 +1181,8 @@ static int venc_queue_setup(struct vb2_queue *q,
+@@ -1159,7 +1184,8 @@ static int venc_queue_setup(struct vb2_queue *q,
  		break;
  	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
  		*num_planes = inst->fmt_cap->num_planes;
@@ -2193,6 +2410,77 @@ index efcec720d..3144322d7 100644
  		inst->num_output_bufs = *num_buffers;
  		sizes[0] = venus_helper_get_framesz(inst->fmt_cap->pixfmt,
  						    inst->width,
+@@ -1275,6 +1301,11 @@ static int venc_start_streaming(struct vb2_queue *q, unsigned int count)
+ 	inst->sequence_cap = 0;
+ 	inst->sequence_out = 0;
+ 
++	/*
++	 * Held while both queues stream, until venc_stop_streaming(): on
++	 * MSM8953 cutting the clocks under a live session, by autosuspend
++	 * or before a command, hangs the SoC.
++	 */
+ 	ret = venc_pm_get(inst);
+ 	if (ret)
+ 		goto error;
+@@ -1283,26 +1314,22 @@ static int venc_start_streaming(struct vb2_queue *q, unsigned int count)
+ 	if (ret)
+ 		goto put_power;
+ 
+-	ret = venc_pm_put(inst, true);
+-	if (ret)
+-		goto error;
+-
+ 	ret = venc_set_properties(inst);
+ 	if (ret)
+-		goto error;
++		goto put_power;
+ 
+ 	ret = venc_verify_conf(inst);
+ 	if (ret)
+-		goto error;
++		goto put_power;
+ 
+ 	ret = venus_helper_set_num_bufs(inst, inst->num_input_bufs,
+ 					inst->num_output_bufs, 0);
+ 	if (ret)
+-		goto error;
++		goto put_power;
+ 
+ 	ret = venus_helper_vb2_start_streaming(inst);
+ 	if (ret)
+-		goto error;
++		goto put_power;
+ 
+ 	inst->enc_state = VENUS_ENC_STATE_ENCODING;
+ 
+@@ -1344,13 +1371,26 @@ static void venc_vb2_buf_queue(struct vb2_buffer *vb)
+ 	mutex_unlock(&inst->lock);
+ }
+ 
++static void venc_stop_streaming(struct vb2_queue *q)
++{
++	struct venus_inst *inst = vb2_get_drv_priv(q);
++	/* streamon_* only change in queue ops (ctx_q_lock) or the last close */
++	bool live = inst->streamon_out && inst->streamon_cap;
++
++	venus_helper_vb2_stop_streaming(q);
++
++	/* the session is gone, drop the reference venc_start_streaming() took */
++	if (live)
++		venc_pm_put(inst, true);
++}
++
+ static const struct vb2_ops venc_vb2_ops = {
+ 	.queue_setup = venc_queue_setup,
+ 	.buf_init = venc_buf_init,
+ 	.buf_cleanup = venc_buf_cleanup,
+ 	.buf_prepare = venus_helper_vb2_buf_prepare,
+ 	.start_streaming = venc_start_streaming,
+-	.stop_streaming = venus_helper_vb2_stop_streaming,
++	.stop_streaming = venc_stop_streaming,
+ 	.buf_queue = venc_vb2_buf_queue,
+ };
+ 
 diff --git a/drivers/mmc/core/sdio_bus.c b/drivers/mmc/core/sdio_bus.c
 index 4b07098c3..d7234532c 100644
 --- a/drivers/mmc/core/sdio_bus.c
@@ -2468,7 +2756,7 @@ index 0f47aadaa..d00f8126e 100644
  		/* stop the port and restart with new port config */
  		rc = q6afe_port_stop(dai_data->port[dai->id]);
 diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
-index 9e3d176f5..24b750967 100644
+index 9e3d176f5..78fa2e6c6 100644
 --- a/sound/soc/qcom/qdsp6/q6asm-dai.c
 +++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
 @@ -71,6 +71,9 @@ struct q6asm_dai_rtd {
@@ -2481,7 +2769,38 @@ index 9e3d176f5..24b750967 100644
  	uint32_t initial_samples_drop;
  	uint32_t trailing_samples_drop;
  	bool notify_on_drain;
-@@ -186,7 +189,6 @@ static void event_handler(uint32_t opcode, uint32_t token,
+@@ -176,33 +179,102 @@ static const struct snd_compr_codec_caps q6asm_compr_caps = {
+ 	.descriptor[0].formats = 0,
+ };
+ 
++/*
++ * Requeue a capture read only while ALSA runs the stream. PAUSE and SUSPEND
++ * resume without a prepare that would queue the reads again, so they keep
++ * the reads in circulation. Called under the PCM stream lock.
++ */
++static bool q6asm_dai_requeue_read(struct snd_pcm_runtime *runtime)
++{
++	snd_pcm_state_t state;
++
++	if (!runtime)
++		return false;
++
++	state = runtime->state;
++	if (state == SNDRV_PCM_STATE_SUSPENDED)
++		state = runtime->suspended_state;
++
++	return state == SNDRV_PCM_STATE_RUNNING ||
++	       state == SNDRV_PCM_STATE_PAUSED;
++}
++
+ static void event_handler(uint32_t opcode, uint32_t token,
+ 			  void *payload, void *priv)
+ {
+ 	struct q6asm_dai_rtd *prtd = priv;
+ 	struct snd_pcm_substream *substream = prtd->substream;
++	unsigned long flags;
+ 
+ 	switch (opcode) {
  	case ASM_CLIENT_EVENT_CMD_RUN_DONE:
  		break;
  	case ASM_CLIENT_EVENT_CMD_EOS_DONE:
@@ -2489,7 +2808,21 @@ index 9e3d176f5..24b750967 100644
  		break;
  	case ASM_CLIENT_EVENT_DATA_WRITE_DONE: {
  		snd_pcm_period_elapsed(substream);
-@@ -203,6 +205,53 @@ static void event_handler(uint32_t opcode, uint32_t token,
+ 		break;
+ 		}
+ 	case ASM_CLIENT_EVENT_DATA_READ_DONE:
+-		snd_pcm_period_elapsed(substream);
+-		if (prtd->state == Q6ASM_STREAM_RUNNING)
++		snd_pcm_stream_lock_irqsave(substream, flags);
++		snd_pcm_period_elapsed_under_stream_lock(substream);
++		if (prtd->state == Q6ASM_STREAM_RUNNING &&
++		    q6asm_dai_requeue_read(substream->runtime))
+ 			q6asm_read(prtd->audio_client, prtd->stream_id);
+-
++		snd_pcm_stream_unlock_irqrestore(substream, flags);
+ 		break;
+ 	default:
+ 		break;
  	}
  }
  
@@ -2543,7 +2876,7 @@ index 9e3d176f5..24b750967 100644
  static int q6asm_dai_prepare(struct snd_soc_component *component,
  			     struct snd_pcm_substream *substream)
  {
-@@ -224,16 +273,13 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -224,16 +296,13 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  	}
  
  	prtd->pcm_count = snd_pcm_lib_period_bytes(substream);
@@ -2567,7 +2900,7 @@ index 9e3d176f5..24b750967 100644
  
  	ret = q6asm_map_memory_regions(substream->stream, prtd->audio_client,
  				       prtd->phys,
-@@ -245,6 +291,7 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -245,6 +314,7 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  							ret);
  		return -ENOMEM;
  	}
@@ -2575,7 +2908,7 @@ index 9e3d176f5..24b750967 100644
  
  	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
  		ret = q6asm_open_write(prtd->audio_client, prtd->stream_id,
-@@ -258,16 +305,18 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -258,16 +328,18 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  
  	if (ret < 0) {
  		dev_err(dev, "%s: q6asm_open_write failed\n", __func__);
@@ -2596,7 +2929,7 @@ index 9e3d176f5..24b750967 100644
  
  	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
  		ret = q6asm_media_format_block_multi_ch_pcm(
-@@ -280,26 +329,29 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -280,26 +352,29 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  							   runtime->rate,
  							   runtime->channels,
  							   prtd->bits_per_sample);
@@ -2641,7 +2974,7 @@ index 9e3d176f5..24b750967 100644
  	return ret;
  }
  
-@@ -341,7 +393,6 @@ static int q6asm_dai_trigger(struct snd_soc_component *component,
+@@ -341,7 +416,6 @@ static int q6asm_dai_trigger(struct snd_soc_component *component,
  				       0, 0, 0);
  		break;
  	case SNDRV_PCM_TRIGGER_STOP:
@@ -2649,20 +2982,20 @@ index 9e3d176f5..24b750967 100644
  		ret = q6asm_cmd_nowait(prtd->audio_client, prtd->stream_id,
  				       CMD_EOS);
  		break;
-@@ -452,22 +503,10 @@ static int q6asm_dai_open(struct snd_soc_component *component,
+@@ -452,22 +526,10 @@ static int q6asm_dai_open(struct snd_soc_component *component,
  static int q6asm_dai_close(struct snd_soc_component *component,
  			   struct snd_pcm_substream *substream)
  {
 -	struct snd_pcm_runtime *runtime = substream->runtime;
 -	struct snd_soc_pcm_runtime *soc_prtd = snd_soc_substream_to_rtd(substream);
 -	struct q6asm_dai_rtd *prtd = runtime->private_data;
--
++	struct q6asm_dai_rtd *prtd = substream->runtime->private_data;
+ 
 -	if (prtd->audio_client) {
 -		if (prtd->state)
 -			q6asm_cmd(prtd->audio_client, prtd->stream_id,
 -				  CMD_CLOSE);
-+	struct q6asm_dai_rtd *prtd = substream->runtime->private_data;
- 
+-
 -		q6asm_unmap_memory_regions(substream->stream,
 -					   prtd->audio_client);
 -		q6asm_audio_client_free(prtd->audio_client);
@@ -2675,7 +3008,7 @@ index 9e3d176f5..24b750967 100644
  	kfree(prtd);
  	return 0;
  }
-@@ -480,11 +519,10 @@ static snd_pcm_uframes_t q6asm_dai_pointer(struct snd_soc_component *component,
+@@ -480,11 +542,10 @@ static snd_pcm_uframes_t q6asm_dai_pointer(struct snd_soc_component *component,
  	struct q6asm_dai_rtd *prtd = runtime->private_data;
  	snd_pcm_uframes_t ptr;
  
@@ -2690,7 +3023,7 @@ index 9e3d176f5..24b750967 100644
  }
  
  static int q6asm_dai_hw_params(struct snd_soc_component *component,
-@@ -555,8 +593,6 @@ static void compress_event_handler(uint32_t opcode, uint32_t token,
+@@ -555,8 +616,6 @@ static void compress_event_handler(uint32_t opcode, uint32_t token,
  			snd_compr_drain_notify(prtd->cstream);
  			prtd->notify_on_drain = false;
  
@@ -2699,7 +3032,7 @@ index 9e3d176f5..24b750967 100644
  		}
  		break;
  
-@@ -674,7 +710,7 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
+@@ -674,7 +733,7 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
  	struct snd_soc_pcm_runtime *rtd = stream->private_data;
  
  	if (prtd->audio_client) {
@@ -2708,7 +3041,7 @@ index 9e3d176f5..24b750967 100644
  			q6asm_cmd(prtd->audio_client, prtd->stream_id,
  				  CMD_CLOSE);
  			if (prtd->next_track_stream_id) {
-@@ -682,11 +718,11 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
+@@ -682,11 +741,11 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
  					  prtd->next_track_stream_id,
  					  CMD_CLOSE);
  			}
@@ -2723,7 +3056,7 @@ index 9e3d176f5..24b750967 100644
  		q6asm_audio_client_free(prtd->audio_client);
  		prtd->audio_client = NULL;
  	}
-@@ -916,7 +952,7 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
+@@ -916,7 +975,7 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
  			      prtd->session_id, dir);
  	if (ret) {
  		dev_err(dev, "Stream reg failed ret:%d\n", ret);
@@ -2732,7 +3065,7 @@ index 9e3d176f5..24b750967 100644
  	}
  
  	ret = __q6asm_dai_compr_set_codec_params(component, stream,
-@@ -942,11 +978,11 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
+@@ -942,11 +1001,11 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
  	return 0;
  
  q6_err:
@@ -2746,7 +3079,7 @@ index 9e3d176f5..24b750967 100644
  	return ret;
  }
  
-@@ -1014,7 +1050,6 @@ static int q6asm_dai_compr_trigger(struct snd_soc_component *component,
+@@ -1014,7 +1073,6 @@ static int q6asm_dai_compr_trigger(struct snd_soc_component *component,
  				       0, 0, 0);
  		break;
  	case SNDRV_PCM_TRIGGER_STOP:
@@ -2755,7 +3088,7 @@ index 9e3d176f5..24b750967 100644
  				       CMD_EOS);
  		break;
 diff --git a/sound/soc/qcom/qdsp6/q6asm.c b/sound/soc/qcom/qdsp6/q6asm.c
-index de0bd8fd0..570e60401 100644
+index de0bd8fd0..694402844 100644
 --- a/sound/soc/qcom/qdsp6/q6asm.c
 +++ b/sound/soc/qcom/qdsp6/q6asm.c
 @@ -514,6 +514,8 @@ int q6asm_map_memory_regions(unsigned int dir, struct audio_client *ac,
@@ -2767,7 +3100,83 @@ index de0bd8fd0..570e60401 100644
  
  	buf[0].phys = phys;
  	buf[0].size = period_sz;
-@@ -884,6 +886,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
+@@ -677,23 +679,30 @@ static int32_t q6asm_stream_callback(struct apr_device *adev,
+ 		client_event = ASM_CLIENT_EVENT_DATA_WRITE_DONE;
+ 		if (ac->io_mode & ASM_SYNC_IO_MODE) {
+ 			phys_addr_t phys;
+-			int token = hdr->token & ASM_WRITE_TOKEN_MASK;
++			u32 token = hdr->token & ASM_WRITE_TOKEN_MASK;
+ 
+ 			guard(spinlock_irqsave)(&ac->lock);
+ 
+ 			port =  &ac->port[SNDRV_PCM_STREAM_PLAYBACK];
+ 
+-			if (!port->buf) {
++			/* num_periods is 0 once the buffers are being freed */
++			if (!port->buf || !port->num_periods) {
+ 				ret = 0;
+ 				goto done;
+ 			}
+ 
++			if (token >= port->num_periods) {
++				dev_err_ratelimited(ac->dev, "Invalid write token %u\n",
++						    token);
++				ret = -EINVAL;
++				goto done;
++			}
++
+ 			phys = port->buf[token].phys;
+ 
+ 			if (lower_32_bits(phys) != result->opcode ||
+ 			    upper_32_bits(phys) != result->status) {
+-				dev_err(ac->dev, "Expected addr %pa\n",
+-					&port->buf[token].phys);
++				dev_err(ac->dev, "Expected addr %pa\n", &phys);
+ 				ret = -EINVAL;
+ 				goto done;
+ 			}
+@@ -704,27 +713,35 @@ static int32_t q6asm_stream_callback(struct apr_device *adev,
+ 		client_event = ASM_CLIENT_EVENT_DATA_READ_DONE;
+ 		if (ac->io_mode & ASM_SYNC_IO_MODE) {
+ 			struct asm_data_cmd_read_v2_done *done = data->payload;
++			u32 token = hdr->token;
+ 			phys_addr_t phys;
+ 
+ 			guard(spinlock_irqsave)(&ac->lock);
+ 			port =  &ac->port[SNDRV_PCM_STREAM_CAPTURE];
+-			if (!port->buf) {
++			/* num_periods is 0 once the buffers are being freed */
++			if (!port->buf || !port->num_periods) {
+ 				ret = 0;
+ 				goto done;
+ 			}
+ 
+-			phys = port->buf[hdr->token].phys;
+-			atomic_set(&port->hw_ptr, hdr->token + 1);
++			if (token >= port->num_periods) {
++				dev_err_ratelimited(ac->dev, "Invalid read token %u\n",
++						    token);
++				ret = -EINVAL;
++				goto done;
++			}
++
++			phys = port->buf[token].phys;
+ 
+ 			if (upper_32_bits(phys) != done->buf_addr_msw ||
+ 			    lower_32_bits(phys) != done->buf_addr_lsw) {
+ 				dev_err(ac->dev, "Expected addr %pa %08x-%08x\n",
+-					&port->buf[hdr->token].phys,
+-					done->buf_addr_lsw,
++					&phys, done->buf_addr_lsw,
+ 					done->buf_addr_msw);
+ 				ret = -EINVAL;
+ 				goto done;
+ 			}
++			atomic_set(&port->hw_ptr, token + 1);
+ 		}
+ 
+ 		break;
+@@ -884,6 +901,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
  	ac->result.opcode = 0;
  	ac->result.status = 0;
  
@@ -2775,7 +3184,7 @@ index de0bd8fd0..570e60401 100644
  	rc = apr_send_pkt(ac->adev, pkt);
  	if (rc < 0)
  		goto err;
-@@ -906,6 +909,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
+@@ -906,6 +924,7 @@ static int q6asm_ac_send_cmd_sync(struct audio_client *ac, struct apr_pkt *pkt)
  
  
  err:

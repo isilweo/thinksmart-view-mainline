@@ -22,7 +22,9 @@ until reboot. Full-duplex use such as an echo canceller hit it within a few
 cycles. Mainline has since fixed most of it; `tsv/device` carries those five
 commits as backports, plus two of ours: tearing down a partially set up stream
 (a failed media format used to leave the stream open) and checking capture
-buffer queueing in prepare. Tested on one unit with XRUN, drop/prepare and
+buffer queueing in prepare. Since r120 two more: the buffer token in data done
+events from the DSP is checked before use, and capture reads are no longer
+queued again after STOP. Tested on one unit with XRUN, drop/prepare and
 hw_params changes for playback and capture.
 
 With the fix, PipeWire's WebRTC echo canceller passed 20/20 full-duplex
