@@ -19,8 +19,8 @@ Without the q6asm-dai fixes the ADSP died after a few stream restarts: a
 second prepare after STOP opened the same ASM session again without closing
 it, the ADSP refused that with error 9 (`ADSP_EALREADY`), and audio was dead
 until reboot. Full-duplex use such as an echo canceller hit it within a few
-cycles. Mainline has since fixed most of it; `tsv/device` carries those five
-commits as backports, plus two of ours: tearing down a partially set up stream
+cycles. Mainline has since fixed most of it. On 7.0.9 `tsv/device` carries
+those five commits as backports (7.1.3 already has three of them), plus two of ours: tearing down a partially set up stream
 (a failed media format used to leave the stream open) and checking capture
 buffer queueing in prepare. Since r120 two more: the buffer token in data done
 events from the DSP is checked before use, and capture reads are no longer
@@ -36,7 +36,11 @@ microphones. `thinksmart-view-extras-echo-cancel` installs the configuration
 
 ## Microphones
 
-The two DMICs are quiet. Without echo cancellation we apply a software gain of
+The two DMICs come up as one stereo capture device (DMIC1 left, DMIC2 right;
+UCM `CaptureChannels 2`), so beamforming in userspace is possible. The
+channels differ but are close (correlation about 0.97 on ambient sound), as
+the microphones sit close together. The echo cancellation setup below uses
+mono. The two DMICs are quiet. Without echo cancellation we apply a software gain of
 4 (`volume volume=4.0`) before encoding. With echo cancellation, do not add the
 gain on top, since the canceller has its own gain control. Not done:
 beamforming with the two DMICs.

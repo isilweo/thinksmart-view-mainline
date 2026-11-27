@@ -12,8 +12,10 @@ on.
 
 - **Kernel source:** [isilweo/linux](https://github.com/isilweo/linux), a fork
   of [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux).
-  Branch `tsv/device` (one commit per change on `v7.0.9-r0`), `tsv/debug`
-  (plus local debug commits), tag `tsv-v7.0.9-r120` (what runs on our tablets).
+  Branch `tsv71/device` (one commit per change on `v7.1.3-r0`), `tsv71/debug`
+  (plus local debug commits), tag `tsv-v7.1.3-r1` (what runs on our tablets).
+  The 7.0.9 series (`tsv/device`, `tsv/debug`, tag `tsv-v7.0.9-r120`) is kept
+  but no longer updated.
 - **This repository:** how to build and install it, a postmarketOS overlay in
   `pmaports/`, and notes per topic in `docs/`.
 
@@ -29,7 +31,7 @@ on.
 | APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |
 
 Not done: beamforming with the two DMICs. The kernel changes are not upstream
-yet; a review of the whole series found bugs, which are fixed since r80, r93 and r120, and
+yet; a review of the whole series found bugs, which are fixed since r80, r93 and r120 (7.0.9), and
 points the maintainers would still raise: see
 [docs/upstream-status.md](docs/upstream-status.md).
 
@@ -53,7 +55,7 @@ those files.
 INSTALL.md
 docs/                    notes per topic, upstream status
 pmaports/                postmarketOS overlay (pmaports v26.06):
-  device/community/linux-postmarketos-qcom-msm8953/   kernel 7.0.9-r120: patch from isilweo/linux + config
+  device/community/linux-postmarketos-qcom-msm8953/   kernel 7.1.3-r1: patch from isilweo/linux + config
   device/community/thinksmart-view-extras/           Wi-Fi boot guard, watchdog setting, echo cancellation
   temp/libcamera/                                      libcamera 0.8.0 with the S5KC505A helper and tuning
   temp/pipewire/                                       PipeWire 1.6.11 (Alpine edge) for libcamera 0.8 on v26.06

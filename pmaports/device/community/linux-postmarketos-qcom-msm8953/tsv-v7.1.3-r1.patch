@@ -1,37 +1,5 @@
-diff --git a/Documentation/devicetree/bindings/iio/light/vishay,vcnl4000.yaml b/Documentation/devicetree/bindings/iio/light/vishay,vcnl4000.yaml
-index 4d1a225e8..42ecc7c05 100644
---- a/Documentation/devicetree/bindings/iio/light/vishay,vcnl4000.yaml
-+++ b/Documentation/devicetree/bindings/iio/light/vishay,vcnl4000.yaml
-@@ -28,6 +28,17 @@ properties:
-   interrupts:
-     maxItems: 1
- 
-+  vdd-supply:
-+    description: Regulator providing power to the "VDD" pin.
-+
-+  vio-supply:
-+    description: Regulator providing power for pull-up of the I/O lines.
-+      Does not connect to the sensor directly, but is needed for the
-+      correct operation of the I2C and interrupt lines.
-+
-+  vled-supply:
-+    description: Regulator providing power to the IR anode pin.
-+
-   reg:
-     maxItems: 1
- 
-@@ -49,6 +60,9 @@ examples:
-             compatible = "vishay,vcnl4200";
-             reg = <0x51>;
-             proximity-near-level = <220>;
-+            vdd-supply = <&reg_vdd>;
-+            vio-supply = <&reg_vio>;
-+            vled-supply = <&reg_vled>;
-         };
-     };
- ...
 diff --git a/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml b/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
-index 6d776b0ca..21944750e 100644
+index 6d776b0ca711..21944750ee37 100644
 --- a/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
 +++ b/Documentation/devicetree/bindings/media/qcom,msm8953-camss.yaml
 @@ -170,9 +170,10 @@ properties:
@@ -56,7 +24,7 @@ index 6d776b0ca..21944750e 100644
    vdda-supply:
      description:
 diff --git a/Documentation/devicetree/bindings/net/bluetooth/qcom,qca2066-bt.yaml b/Documentation/devicetree/bindings/net/bluetooth/qcom,qca2066-bt.yaml
-index d4f167c9b..79a2ae5ce 100644
+index d4f167c9b7e1..79a2ae5ce294 100644
 --- a/Documentation/devicetree/bindings/net/bluetooth/qcom,qca2066-bt.yaml
 +++ b/Documentation/devicetree/bindings/net/bluetooth/qcom,qca2066-bt.yaml
 @@ -12,9 +12,13 @@ maintainers:
@@ -77,7 +45,7 @@ index d4f167c9b..79a2ae5ce 100644
    clocks:
      items:
 diff --git a/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml b/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
-index 9f861045b..03e85aa73 100644
+index 9f861045b71e..03e85aa73ba1 100644
 --- a/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
 +++ b/Documentation/devicetree/bindings/watchdog/qcom-wdt.yaml
 @@ -25,6 +25,7 @@ properties:
@@ -89,7 +57,7 @@ index 9f861045b..03e85aa73 100644
                - qcom,apss-wdt-msm8994
                - qcom,apss-wdt-qcm2290
 diff --git a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
-index cecb92fea..da2c0143f 100644
+index bf7c2f2219ec..3347c29fca40 100644
 --- a/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 +++ b/arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts
 @@ -91,6 +91,10 @@ accelerometer@18 {
@@ -137,7 +105,7 @@ index cecb92fea..da2c0143f 100644
  		enable-gpios = <&tlmm 76 GPIO_ACTIVE_HIGH>;
  		clocks = <&sleep_clk>;
  	};
-@@ -287,7 +287,7 @@ ft8201_ts: touchscreen@38 {
+@@ -285,7 +285,7 @@ ft8201_ts: touchscreen@38 {
  		touchscreen-size-x = <800>;
  		touchscreen-size-y = <1280>;
  
@@ -146,7 +114,7 @@ index cecb92fea..da2c0143f 100644
  	};
  
  	hx83100a_ts: touchscreen@48 {
-@@ -309,7 +309,7 @@ hx83100a_ts: touchscreen@48 {
+@@ -305,7 +305,7 @@ hx83100a_ts: touchscreen@48 {
  		touchscreen-size-x = <800>;
  		touchscreen-size-y = <1280>;
  
@@ -155,7 +123,7 @@ index cecb92fea..da2c0143f 100644
  	};
  };
  
-@@ -455,8 +455,8 @@ pm8953_l1: l1 {
+@@ -457,8 +457,8 @@ pm8953_l1: l1 {
  		};
  
  		pm8953_l2: l2 {
@@ -166,7 +134,7 @@ index cecb92fea..da2c0143f 100644
  			regulator-always-on;
  		};
  
-@@ -508,7 +508,8 @@ pm8953_l11: l11 {
+@@ -510,7 +510,8 @@ pm8953_l11: l11 {
  
  		pm8953_l12: l12 {
  			regulator-min-microvolt = <1800000>;
@@ -176,7 +144,7 @@ index cecb92fea..da2c0143f 100644
  		};
  
  		pm8953_l13: l13 {
-@@ -560,6 +561,7 @@ &sdhc_2 {
+@@ -562,6 +563,7 @@ &sdhc_2 {
  	vqmmc-supply = <&pm8953_l12>;
  
  	mmc-pwrseq = <&wlan_pwrseq>;
@@ -184,7 +152,7 @@ index cecb92fea..da2c0143f 100644
  	non-removable;
  	wakeup-source;
  	/* Some devices experience dropouts of the WiFi module at the default of
-@@ -610,7 +612,7 @@ pmx_mdss_sleep: pmx-mdss-sleep-state {
+@@ -612,7 +614,7 @@ pmx_mdss_sleep: pmx-mdss-sleep-state {
  	};
  
  	sensor_i2c_default: sensor-i2c-default-state {
@@ -193,7 +161,7 @@ index cecb92fea..da2c0143f 100644
  		function = "gpio";
  		drive-strength = <2>;
  		bias-disable;
-@@ -739,3 +741,99 @@ &uart_0 {
+@@ -720,3 +722,99 @@ &uart_0 {
  &usb3 {
  	status = "okay";
  };
@@ -294,7 +262,7 @@ index cecb92fea..da2c0143f 100644
 +	};
 +};
 diff --git a/arch/arm64/boot/dts/qcom/msm8953.dtsi b/arch/arm64/boot/dts/qcom/msm8953.dtsi
-index 79838fc01..03c641ab1 100644
+index 7d5ddfdf9f9d..a52ee1edb4ed 100644
 --- a/arch/arm64/boot/dts/qcom/msm8953.dtsi
 +++ b/arch/arm64/boot/dts/qcom/msm8953.dtsi
 @@ -1761,7 +1761,9 @@ camss: camss@1b00020 {
@@ -335,7 +303,7 @@ index 79838fc01..03c641ab1 100644
  			compatible = "qcom,msm8953-cpr4pd";
  
 diff --git a/drivers/clk/qcom/gcc-msm8953.c b/drivers/clk/qcom/gcc-msm8953.c
-index c4ec9950a..de228a76b 100644
+index c4ec9950ab68..de228a76b09d 100644
 --- a/drivers/clk/qcom/gcc-msm8953.c
 +++ b/drivers/clk/qcom/gcc-msm8953.c
 @@ -3873,7 +3873,6 @@ static struct gdsc venus_core0_gdsc = {
@@ -347,18 +315,10 @@ index c4ec9950a..de228a76b 100644
  };
  
 diff --git a/drivers/iio/light/vcnl4000.c b/drivers/iio/light/vcnl4000.c
-index a36c23813..86a201411 100644
+index 9650dbc41f2b..d96bd9f075d9 100644
 --- a/drivers/iio/light/vcnl4000.c
 +++ b/drivers/iio/light/vcnl4000.c
-@@ -23,6 +23,7 @@
- #include <linux/err.h>
- #include <linux/delay.h>
- #include <linux/pm_runtime.h>
-+#include <linux/regulator/consumer.h>
- #include <linux/interrupt.h>
- #include <linux/units.h>
- 
-@@ -88,6 +89,7 @@
+@@ -89,6 +89,7 @@
  #define VCNL4040_ALS_CONF_INT_EN	BIT(1) /* Ambient light Interrupt enable */
  #define VCNL4040_ALS_CONF_PERS	GENMASK(3, 2) /* Ambient interrupt persistence setting */
  #define VCNL4040_PS_CONF1_PS_SHUTDOWN	BIT(0)
@@ -366,7 +326,7 @@ index a36c23813..86a201411 100644
  #define VCNL4040_PS_CONF2_PS_IT	GENMASK(3, 1) /* Proximity integration time */
  #define VCNL4040_CONF1_PS_PERS	GENMASK(5, 4) /* Proximity interrupt persistence setting */
  #define VCNL4040_PS_CONF2_PS_HD		BIT(11)	/* Proximity high definition */
-@@ -122,6 +124,12 @@
+@@ -123,6 +124,12 @@
  	(FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4040_CONF3_PS_MPS_16BITS) | \
  	 FIELD_PREP(VCNL4040_PS_MS_LED_I, VCNL4040_CONF3_PS_LED_I_16BITS))
  
@@ -379,7 +339,7 @@ index a36c23813..86a201411 100644
  static const int vcnl4010_prox_sampling_frequency[][2] = {
  	{1, 950000},
  	{3, 906250},
-@@ -232,6 +240,8 @@ struct vcnl4000_chip_spec {
+@@ -234,6 +241,8 @@ struct vcnl4000_chip_spec {
  	const int(*als_it_times)[][2];
  	const int num_als_it_times;
  	const unsigned int ulux_step;
@@ -388,7 +348,7 @@ index a36c23813..86a201411 100644
  };
  
  static const struct i2c_device_id vcnl4000_id[] = {
-@@ -326,12 +336,21 @@ static ssize_t vcnl4000_write_ps_enable(struct vcnl4000_data *data, bool en)
+@@ -330,12 +339,21 @@ static ssize_t vcnl4000_write_ps_enable(struct vcnl4000_data *data, bool en)
  	return ret;
  }
  
@@ -412,7 +372,7 @@ index a36c23813..86a201411 100644
  		return 0;
  
  	ret = vcnl4000_write_als_enable(data, on);
-@@ -345,12 +364,54 @@ static int vcnl4200_set_power_state(struct vcnl4000_data *data, bool on)
+@@ -349,12 +367,54 @@ static int vcnl4200_set_power_state(struct vcnl4000_data *data, bool on)
  	if (on) {
  		/* Wait at least one integration cycle before fetching data */
  		data->vcnl4200_al.last_measurement = ktime_get();
@@ -467,8 +427,8 @@ index a36c23813..86a201411 100644
 +
  static int vcnl4200_init(struct vcnl4000_data *data)
  {
- 	int ret, id;
-@@ -385,14 +446,10 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+ 	struct i2c_client *client = data->client;
+@@ -391,14 +451,10 @@ static int vcnl4200_init(struct vcnl4000_data *data)
  	case VCNL4200_PROD_ID:
  		/* Default wait time is 50ms, add 20% tolerance. */
  		data->vcnl4200_al.sampling_rate = ktime_set(0, 60000 * 1000);
@@ -483,11 +443,12 @@ index a36c23813..86a201411 100644
  		break;
  	}
  	data->al_scale = data->chip_spec->ulux_step;
-@@ -405,18 +462,56 @@ static int vcnl4200_init(struct vcnl4000_data *data)
+@@ -417,18 +473,58 @@ static int vcnl4200_init(struct vcnl4000_data *data)
  	if (ret < 0)
  		return ret;
  
 -	regval = ret | VCNL4040_PS_CONF2_PS_HD;
+-	ret = i2c_smbus_write_word_data(client, VCNL4200_PS_CONF1, regval);
 +	/*
 +	 * Start with the interrupts disabled. The sensor keeps its registers
 +	 * as long as it stays powered, also across a driver rebind, and
@@ -500,39 +461,40 @@ index a36c23813..86a201411 100644
 +				     VCNL4200_PS_DUTY_1_1280) |
 +			  FIELD_PREP(VCNL4040_PS_CONF2_PS_IT, VCNL4200_PS_IT_8T);
 +	}
- 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF1,
- 					regval);
- 	if (ret < 0)
- 		return ret;
- 
--	/* Align proximity sensor sample rate to 16 bits data width */
++	ret = i2c_smbus_write_word_data(client, VCNL4200_PS_CONF1,
++					regval);
++	if (ret < 0)
++		return ret;
++
 +	mutex_lock(&data->vcnl4200_ps.lock);
 +	vcnl4040_set_ps_sampling_rate(data, regval);
 +	mutex_unlock(&data->vcnl4200_ps.lock);
 +
-+	ret = i2c_smbus_read_word_data(data->client, VCNL4200_AL_CONF);
++	ret = i2c_smbus_read_word_data(client, VCNL4200_AL_CONF);
 +	if (ret < 0)
 +		return ret;
 +
-+	ret = i2c_smbus_write_word_data(data->client, VCNL4200_AL_CONF,
++	ret = i2c_smbus_write_word_data(client, VCNL4200_AL_CONF,
 +					ret & ~VCNL4040_ALS_CONF_INT_EN);
 +	if (ret < 0)
 +		return ret;
 +
 +	/* Reading the flags releases an INT line left asserted */
-+	ret = i2c_smbus_read_word_data(data->client, data->chip_spec->int_reg);
-+	if (ret < 0)
-+		return ret;
-+
++	ret = i2c_smbus_read_word_data(client, data->chip_spec->int_reg);
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	/* Align proximity sensor sample rate to 16 bits data width */
 +	/*
 +	 * IR LED pulses and current: the low-power settings on the VCNL4200,
 +	 * 8 pulses of 120 mA on the VCNL4040.
 +	 */
- 	ret = i2c_smbus_read_word_data(data->client, VCNL4200_PS_CONF3);
+ 	ret = i2c_smbus_read_word_data(client, VCNL4200_PS_CONF3);
  	if (ret < 0)
  		return ret;
  
 -	regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
+-	ret = i2c_smbus_write_word_data(client, VCNL4200_PS_CONF3, regval);
 +	if (id == VCNL4200_PROD_ID) {
 +		regval = ret & ~(VCNL4040_PS_CONF3_MPS | VCNL4040_PS_MS_LED_I);
 +		regval |= FIELD_PREP(VCNL4040_PS_CONF3_MPS, VCNL4200_PS_MPS_2) |
@@ -540,10 +502,12 @@ index a36c23813..86a201411 100644
 +	} else {
 +		regval = ret | VCNL4040_CONF3_PS_SAMPLE_16BITS;
 +	}
- 	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF3,
- 					regval);
++	ret = i2c_smbus_write_word_data(client, VCNL4200_PS_CONF3,
++					regval);
  	if (ret < 0)
-@@ -502,16 +597,27 @@ static int vcnl4200_measure(struct vcnl4000_data *data,
+ 		return ret;
+ 
+@@ -508,16 +604,27 @@ static int vcnl4200_measure(struct vcnl4000_data *data,
  
  	mutex_lock(&chan->lock);
  
@@ -577,7 +541,7 @@ index a36c23813..86a201411 100644
  	if (ret < 0)
  		return ret;
  
-@@ -672,20 +778,28 @@ static ssize_t vcnl4040_write_ps_it(struct vcnl4000_data *data, int val)
+@@ -678,20 +785,28 @@ static ssize_t vcnl4040_write_ps_it(struct vcnl4000_data *data, int val)
  	if (index < 0)
  		return -EINVAL;
  
@@ -608,7 +572,7 @@ index a36c23813..86a201411 100644
  	mutex_unlock(&data->vcnl4000_lock);
  	return ret;
  }
-@@ -751,9 +865,14 @@ static ssize_t vcnl4040_write_als_period(struct vcnl4000_data *data, int val, in
+@@ -757,9 +872,14 @@ static ssize_t vcnl4040_write_als_period(struct vcnl4000_data *data, int val, in
  	return ret;
  }
  
@@ -624,7 +588,7 @@ index a36c23813..86a201411 100644
  
  	ret = i2c_smbus_read_word_data(data->client, VCNL4200_PS_CONF1);
  	if (ret < 0)
-@@ -763,46 +882,48 @@ static ssize_t vcnl4040_read_ps_period(struct vcnl4000_data *data, int *val, int
+@@ -769,46 +889,48 @@ static ssize_t vcnl4040_read_ps_period(struct vcnl4000_data *data, int *val, int
  	if (ret_pers >= ARRAY_SIZE(vcnl4040_ps_persistence))
  		return -EINVAL;
  
@@ -695,7 +659,7 @@ index a36c23813..86a201411 100644
  	regval = FIELD_PREP(VCNL4040_CONF1_PS_PERS, i);
  	regval |= (ret & ~VCNL4040_CONF1_PS_PERS);
  	ret = i2c_smbus_write_word_data(data->client, VCNL4200_PS_CONF1,
-@@ -1466,16 +1587,12 @@ static int vcnl4040_read_event_config(struct iio_dev *indio_dev,
+@@ -1472,16 +1594,12 @@ static int vcnl4040_read_event_config(struct iio_dev *indio_dev,
  		if (ret < 0)
  			return ret;
  
@@ -713,7 +677,7 @@ index a36c23813..86a201411 100644
  		return (dir == IIO_EV_DIR_RISING) ?
  			FIELD_GET(VCNL4040_PS_IF_AWAY, ret) :
  			FIELD_GET(VCNL4040_PS_IF_CLOSE, ret);
-@@ -1492,10 +1609,25 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
+@@ -1498,10 +1616,25 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
  {
  	int ret = -EINVAL;
  	u16 val, mask;
@@ -739,7 +703,7 @@ index a36c23813..86a201411 100644
  	switch (chan->type) {
  	case IIO_LIGHT:
  		ret = i2c_smbus_read_word_data(data->client, VCNL4200_AL_CONF);
-@@ -1508,9 +1640,10 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
+@@ -1514,9 +1647,10 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
  		else
  			val = (ret & ~mask);
  
@@ -751,7 +715,7 @@ index a36c23813..86a201411 100644
  		break;
  	case IIO_PROXIMITY:
  		ret = i2c_smbus_read_word_data(data->client, VCNL4200_PS_CONF1);
-@@ -1524,17 +1657,28 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
+@@ -1530,17 +1664,28 @@ static int vcnl4040_write_event_config(struct iio_dev *indio_dev,
  
  		val = state ? (ret | mask) : (ret & ~mask);
  
@@ -781,7 +745,7 @@ index a36c23813..86a201411 100644
  	return ret;
  }
  
-@@ -1906,6 +2050,8 @@ static const struct vcnl4000_chip_spec vcnl4000_chip_spec_cfg[] = {
+@@ -1941,6 +2086,8 @@ static const struct vcnl4000_chip_spec vcnl4000_chip_spec_cfg[] = {
  		.als_it_times = &vcnl4040_als_it_times,
  		.num_als_it_times = ARRAY_SIZE(vcnl4040_als_it_times),
  		.ulux_step = 100000,
@@ -790,7 +754,7 @@ index a36c23813..86a201411 100644
  	},
  	[VCNL4200] = {
  		.prod = "VCNL4200",
-@@ -1923,6 +2069,8 @@ static const struct vcnl4000_chip_spec vcnl4000_chip_spec_cfg[] = {
+@@ -1958,6 +2105,8 @@ static const struct vcnl4000_chip_spec vcnl4000_chip_spec_cfg[] = {
  		.als_it_times = &vcnl4200_als_it_times,
  		.num_als_it_times = ARRAY_SIZE(vcnl4200_als_it_times),
  		.ulux_step = 24000,
@@ -799,47 +763,41 @@ index a36c23813..86a201411 100644
  	},
  };
  
-@@ -1951,6 +2099,7 @@ static int vcnl4010_probe_trigger(struct iio_dev *indio_dev)
+@@ -1986,7 +2135,7 @@ static int vcnl4010_probe_trigger(struct iio_dev *indio_dev)
  static int vcnl4000_probe(struct i2c_client *client)
  {
  	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+-	const char * const regulator_names[] = { "vdd", "vio", "vled" };
 +	static const char * const regulator_names[] = { "vdd", "vio", "vled" };
+ 	struct device *dev = &client->dev;
  	struct vcnl4000_data *data;
  	struct iio_dev *indio_dev;
- 	int ret;
-@@ -1965,6 +2114,16 @@ static int vcnl4000_probe(struct i2c_client *client)
- 	data->id = id->driver_data;
- 	data->chip_spec = &vcnl4000_chip_spec_cfg[data->id];
+@@ -2007,6 +2156,10 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	if (ret)
+ 		return ret;
  
-+	ret = devm_regulator_bulk_get_enable(&client->dev,
-+					     ARRAY_SIZE(regulator_names),
-+					     regulator_names);
-+	if (ret)
-+		return ret;
-+
 +	/* Wait for the internal reset release and the oscillator start */
 +	if (data->chip_spec->power_up_delay_us)
 +		fsleep(data->chip_spec->power_up_delay_us);
 +
- 	mutex_init(&data->vcnl4000_lock);
- 
- 	ret = data->chip_spec->init(data);
-@@ -1993,7 +2152,7 @@ static int vcnl4000_probe(struct i2c_client *client)
- 		if (ret < 0) {
- 			dev_err(&client->dev,
- 				"unable to setup iio triggered buffer\n");
+ 	ret = devm_mutex_init(dev, &data->vcnl4000_lock);
+ 	if (ret)
+ 		return ret;
+@@ -2036,7 +2189,7 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 						      data->chip_spec->trig_buffer_func,
+ 						      data->chip_spec->buffer_setup_ops);
+ 		if (ret < 0)
 -			return ret;
 +			goto fail_poweroff;
- 		}
  	}
  
-@@ -2006,12 +2165,12 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 	if (client->irq && data->chip_spec->irq_thread) {
+@@ -2047,11 +2200,11 @@ static int vcnl4000_probe(struct i2c_client *client)
+ 						"vcnl4000_irq",
  						indio_dev);
- 		if (ret < 0) {
- 			dev_err(&client->dev, "irq request failed\n");
+ 		if (ret < 0)
 -			return ret;
 +			goto fail_poweroff;
- 		}
  
  		ret = vcnl4010_probe_trigger(indio_dev);
  		if (ret < 0)
@@ -847,8 +805,8 @@ index a36c23813..86a201411 100644
 +			goto fail_poweroff;
  	}
  
- 	ret = pm_runtime_set_active(&client->dev);
-@@ -2066,6 +2225,13 @@ static void vcnl4000_remove(struct i2c_client *client)
+ 	ret = pm_runtime_set_active(dev);
+@@ -2115,6 +2268,13 @@ static void vcnl4000_remove(struct i2c_client *client)
  	pm_runtime_dont_use_autosuspend(&client->dev);
  	pm_runtime_disable(&client->dev);
  	iio_device_unregister(indio_dev);
@@ -863,7 +821,7 @@ index a36c23813..86a201411 100644
  
  	ret = data->chip_spec->set_power_state(data, false);
 diff --git a/drivers/media/i2c/ccs/ccs-core.c b/drivers/media/i2c/ccs/ccs-core.c
-index 8e25f970f..ef9f1898d 100644
+index 8e25f970fd12..ef9f1898db2e 100644
 --- a/drivers/media/i2c/ccs/ccs-core.c
 +++ b/drivers/media/i2c/ccs/ccs-core.c
 @@ -48,6 +48,7 @@ static struct ccs_limit_offset {
@@ -930,7 +888,7 @@ index 8e25f970f..ef9f1898d 100644
  	.set_fmt = ccs_set_format,
  	.get_selection = ccs_get_selection,
 diff --git a/drivers/media/i2c/ccs/ccs-quirk.c b/drivers/media/i2c/ccs/ccs-quirk.c
-index e48a4fa1f..7705e3c33 100644
+index e48a4fa1f5dd..7705e3c33a45 100644
 --- a/drivers/media/i2c/ccs/ccs-quirk.c
 +++ b/drivers/media/i2c/ccs/ccs-quirk.c
 @@ -215,3 +215,136 @@ static int tcm8500md_limits(struct ccs_sensor *sensor)
@@ -1071,7 +1029,7 @@ index e48a4fa1f..7705e3c33 100644
 +	.post_poweron = s5kc505a_post_poweron,
 +};
 diff --git a/drivers/media/i2c/ccs/ccs-quirk.h b/drivers/media/i2c/ccs/ccs-quirk.h
-index 392c97109..7d7aaca45 100644
+index 392c97109617..7d7aaca45a22 100644
 --- a/drivers/media/i2c/ccs/ccs-quirk.h
 +++ b/drivers/media/i2c/ccs/ccs-quirk.h
 @@ -75,5 +75,6 @@ extern const struct ccs_quirk smiapp_jt8ev1_quirk;
@@ -1082,7 +1040,7 @@ index 392c97109..7d7aaca45 100644
  
  #endif /* __CCS_QUIRK__ */
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
-index 9cf1ccdb2..ba4346423 100644
+index 9cf1ccdb2fe7..ba4346423d74 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-1.c
 @@ -128,6 +128,14 @@
@@ -1198,7 +1156,7 @@ index 9cf1ccdb2..ba4346423 100644
  	.wm_line_based = vfe_wm_line_based,
  	.wm_set_framedrop_pattern = vfe_wm_set_framedrop_pattern,
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-7.c b/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
-index 76729607d..2f1617396 100644
+index 76729607db02..2f16173968d2 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-7.c
 @@ -252,11 +252,11 @@
@@ -1217,7 +1175,7 @@ index 76729607d..2f1617396 100644
  
  	return 0;
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-4-8.c b/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
-index b2f7d855d..0887693b9 100644
+index b2f7d855d8dd..0887693b98ca 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-4-8.c
 @@ -1009,7 +1009,7 @@ static irqreturn_t vfe_isr(int irq, void *dev)
@@ -1230,7 +1188,7 @@ index b2f7d855d..0887693b9 100644
  	/* On VFE4.8 the ub-size is the same on both instances */
  	return MSM_VFE_VFE0_UB_SIZE_RDI;
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
-index d84a375e3..ecad9e854 100644
+index d84a375e3318..ecad9e8548f1 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.c
 @@ -171,15 +171,21 @@ static int vfe_enable_output(struct vfe_line *line)
@@ -1267,7 +1225,7 @@ index d84a375e3..ecad9e854 100644
  		vfe->ops_gen1->bus_reload_wm(vfe, output->wm_idx[0]);
  	} else {
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
-index 6d5f96565..f6db0fc8f 100644
+index 6d5f9656562c..f6db0fc8f119 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-gen1.h
 @@ -28,7 +28,7 @@ struct vfe_hw_ops_gen1 {
@@ -1289,7 +1247,7 @@ index 6d5f96565..f6db0fc8f 100644
  			      u8 plane, u32 enable);
  	void (*wm_set_ub_cfg)(struct vfe_device *vfe, u8 wm, u16 offset, u16 depth);
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe-vbif.c b/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
-index 911f8da02..232c82dde 100644
+index 911f8da02f1f..232c82ddef03 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe-vbif.c
 @@ -17,6 +17,10 @@
@@ -1325,7 +1283,7 @@ index 911f8da02..232c82dde 100644
  	return 0;
  }
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe.c b/drivers/media/platform/qcom/camss/camss-vfe.c
-index 64518915e..466610da2 100644
+index 64518915e250..466610da22b6 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe.c
 +++ b/drivers/media/platform/qcom/camss/camss-vfe.c
 @@ -1443,7 +1443,9 @@ static void vfe_try_format(struct vfe_line *line,
@@ -1371,7 +1329,7 @@ index 64518915e..466610da2 100644
  			video_out->bpl_alignment = 16;
  			video_out->line_based = 1;
 diff --git a/drivers/media/platform/qcom/camss/camss-vfe.h b/drivers/media/platform/qcom/camss/camss-vfe.h
-index a2188a81b..b1dd247eb 100644
+index a2188a81bcfc..b1dd247eb8a0 100644
 --- a/drivers/media/platform/qcom/camss/camss-vfe.h
 +++ b/drivers/media/platform/qcom/camss/camss-vfe.h
 @@ -138,6 +138,7 @@ struct vfe_subdev_resources {
@@ -1396,7 +1354,7 @@ index a2188a81b..b1dd247eb 100644
   * vfe_enable - Enable streaming on VFE line
   * @line: VFE line
 diff --git a/drivers/media/platform/qcom/camss/camss-video.c b/drivers/media/platform/qcom/camss/camss-video.c
-index 831486e14..a7f326caa 100644
+index 831486e14754..a7f326caa7c5 100644
 --- a/drivers/media/platform/qcom/camss/camss-video.c
 +++ b/drivers/media/platform/qcom/camss/camss-video.c
 @@ -21,7 +21,6 @@
@@ -1447,7 +1405,7 @@ index 831486e14..a7f326caa 100644
  	for (i = 0; i < pix_mp->num_planes; i++) {
  		bpl = pix_mp->width / fi->hsub[i].numerator *
 diff --git a/drivers/media/platform/qcom/camss/camss-video.h b/drivers/media/platform/qcom/camss/camss-video.h
-index d3e56e240..14f1c5ede 100644
+index d3e56e240a88..14f1c5ede208 100644
 --- a/drivers/media/platform/qcom/camss/camss-video.h
 +++ b/drivers/media/platform/qcom/camss/camss-video.h
 @@ -27,6 +27,8 @@ struct camss_buffer {
@@ -1468,7 +1426,7 @@ index d3e56e240..14f1c5ede 100644
  	unsigned int nformats;
  };
 diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
-index eba1fa7a8..9cbff8c7b 100644
+index eba1fa7a852e..9cbff8c7b95e 100644
 --- a/drivers/media/platform/qcom/camss/camss.c
 +++ b/drivers/media/platform/qcom/camss/camss.c
 @@ -390,6 +390,59 @@ static const struct camss_subdev_resources ispif_res_8x53 = {
@@ -1661,7 +1619,7 @@ index eba1fa7a8..9cbff8c7b 100644
  	.vfe_num = ARRAY_SIZE(vfe_res_8x53),
  };
 diff --git a/drivers/media/platform/qcom/venus/core.h b/drivers/media/platform/qcom/venus/core.h
-index 7506f5d0f..bcd380613 100644
+index 7506f5d0f609..bcd3806139c7 100644
 --- a/drivers/media/platform/qcom/venus/core.h
 +++ b/drivers/media/platform/qcom/venus/core.h
 @@ -337,6 +337,8 @@ struct venus_buffer {
@@ -1702,7 +1660,7 @@ index 7506f5d0f..bcd380613 100644
  	enum venus_inst_modes flags;
  	struct ida dpb_ids;
 diff --git a/drivers/media/platform/qcom/venus/helpers.c b/drivers/media/platform/qcom/venus/helpers.c
-index c71e2b81c..c4a07f73d 100644
+index c71e2b81c765..c4a07f73d65b 100644
 --- a/drivers/media/platform/qcom/venus/helpers.c
 +++ b/drivers/media/platform/qcom/venus/helpers.c
 @@ -1366,11 +1366,15 @@ static void delayed_process_buf_func(struct work_struct *work)
@@ -1780,7 +1738,7 @@ index c71e2b81c..c4a07f73d 100644
  
  	/* Skip processing queued capture buffers after LAST flag */
 diff --git a/drivers/media/platform/qcom/venus/helpers.h b/drivers/media/platform/qcom/venus/helpers.h
-index 358e4f39c..388dc2bd4 100644
+index 358e4f39c9c0..388dc2bd42bf 100644
 --- a/drivers/media/platform/qcom/venus/helpers.h
 +++ b/drivers/media/platform/qcom/venus/helpers.h
 @@ -51,6 +51,7 @@ int venus_helper_set_multistream(struct venus_inst *inst, bool out_en,
@@ -1792,7 +1750,7 @@ index 358e4f39c..388dc2bd4 100644
  int venus_helper_session_init(struct venus_inst *inst);
  int venus_helper_get_out_fmts(struct venus_inst *inst, u32 fmt, u32 *out_fmt,
 diff --git a/drivers/media/platform/qcom/venus/hfi_parser.c b/drivers/media/platform/qcom/venus/hfi_parser.c
-index a1397765a..171ec62a2 100644
+index a1397765a0be..171ec62a2364 100644
 --- a/drivers/media/platform/qcom/venus/hfi_parser.c
 +++ b/drivers/media/platform/qcom/venus/hfi_parser.c
 @@ -131,22 +131,48 @@ fill_caps(struct hfi_plat_caps *cap, const void *data, unsigned int num)
@@ -1861,7 +1819,7 @@ index a1397765a..171ec62a2 100644
  		case HFI_PROPERTY_PARAM_PROFILE_LEVEL_SUPPORTED:
  			if (rem_bytes < sizeof(struct hfi_profile_level_supported))
 diff --git a/drivers/media/platform/qcom/venus/hfi_venus.c b/drivers/media/platform/qcom/venus/hfi_venus.c
-index bd82066bb..fe2e24c88 100644
+index bd82066bb6e7..fe2e24c88712 100644
 --- a/drivers/media/platform/qcom/venus/hfi_venus.c
 +++ b/drivers/media/platform/qcom/venus/hfi_venus.c
 @@ -10,6 +10,7 @@
@@ -1900,7 +1858,7 @@ index bd82066bb..fe2e24c88 100644
  	/* For specific venus core, it is mandatory to set the UBWC configuration */
  	if (res->ubwc_conf) {
 diff --git a/drivers/media/platform/qcom/venus/pm_helpers.c b/drivers/media/platform/qcom/venus/pm_helpers.c
-index f0269524a..e0271461f 100644
+index f0269524ac70..e0271461f227 100644
 --- a/drivers/media/platform/qcom/venus/pm_helpers.c
 +++ b/drivers/media/platform/qcom/venus/pm_helpers.c
 @@ -8,6 +8,7 @@
@@ -1923,7 +1881,7 @@ index f0269524a..e0271461f 100644
  		writel(0, ctrl);
  	else
 diff --git a/drivers/media/platform/qcom/venus/vdec.c b/drivers/media/platform/qcom/venus/vdec.c
-index 7a3247dcb..3b82a687e 100644
+index 39c520a2907b..96bac8fff3a1 100644
 --- a/drivers/media/platform/qcom/venus/vdec.c
 +++ b/drivers/media/platform/qcom/venus/vdec.c
 @@ -545,12 +545,44 @@ static int vdec_subscribe_event(struct v4l2_fh *fh,
@@ -2309,7 +2267,7 @@ index 7a3247dcb..3b82a687e 100644
  	ida_destroy(&inst->dpb_ids);
  	vdec_pm_put(inst, false);
 diff --git a/drivers/media/platform/qcom/venus/venc.c b/drivers/media/platform/qcom/venus/venc.c
-index efcec720d..efe2887af 100644
+index efcec720d14a..efe2887aff17 100644
 --- a/drivers/media/platform/qcom/venus/venc.c
 +++ b/drivers/media/platform/qcom/venus/venc.c
 @@ -473,6 +473,7 @@ static int venc_enum_frameintervals(struct file *file, void *fh,
@@ -2482,7 +2440,7 @@ index efcec720d..efe2887af 100644
  };
  
 diff --git a/drivers/mmc/core/sdio_bus.c b/drivers/mmc/core/sdio_bus.c
-index 4b07098c3..d7234532c 100644
+index 4b07098c33c3..d7234532c402 100644
 --- a/drivers/mmc/core/sdio_bus.c
 +++ b/drivers/mmc/core/sdio_bus.c
 @@ -155,15 +155,17 @@ static int sdio_bus_probe(struct device *dev)
@@ -2539,10 +2497,10 @@ index 4b07098c3..d7234532c 100644
  }
  
 diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
-index 2c4d8f6cc..5909a0ed1 100644
+index a280f900668f..0e671ad0da03 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
-@@ -2223,7 +2223,7 @@ config SND_SOC_TAS5720
+@@ -2229,7 +2229,7 @@ config SND_SOC_TAS5720
  	  Class-D audio power amplifiers.
  
  config SND_SOC_TAS5805M
@@ -2552,7 +2510,7 @@ index 2c4d8f6cc..5909a0ed1 100644
  	help
  	  Enable support for Texas Instruments TAS5805M Class-D
 diff --git a/sound/soc/codecs/tas5805m.c b/sound/soc/codecs/tas5805m.c
-index 867046b7a..0e18a86e8 100644
+index 867046b7aaa0..0e18a86e82ff 100644
 --- a/sound/soc/codecs/tas5805m.c
 +++ b/sound/soc/codecs/tas5805m.c
 @@ -4,6 +4,7 @@
@@ -2736,7 +2694,7 @@ index 867046b7a..0e18a86e8 100644
 +MODULE_DESCRIPTION("TAS5782M/TAS5805M Audio Amplifier Driver");
  MODULE_LICENSE("GPL v2");
 diff --git a/sound/soc/qcom/qdsp6/q6afe-dai.c b/sound/soc/qcom/qdsp6/q6afe-dai.c
-index 0f47aadaa..d00f8126e 100644
+index a0d21034a626..55716cf8f9ea 100644
 --- a/sound/soc/qcom/qdsp6/q6afe-dai.c
 +++ b/sound/soc/qcom/qdsp6/q6afe-dai.c
 @@ -373,6 +373,7 @@ static void q6afe_dai_shutdown(struct snd_pcm_substream *substream,
@@ -2756,7 +2714,7 @@ index 0f47aadaa..d00f8126e 100644
  		/* stop the port and restart with new port config */
  		rc = q6afe_port_stop(dai_data->port[dai->id]);
 diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
-index 9e3d176f5..78fa2e6c6 100644
+index 4f09fdd40905..0adbcb2bed34 100644
 --- a/sound/soc/qcom/qdsp6/q6asm-dai.c
 +++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
 @@ -71,6 +71,9 @@ struct q6asm_dai_rtd {
@@ -2769,7 +2727,7 @@ index 9e3d176f5..78fa2e6c6 100644
  	uint32_t initial_samples_drop;
  	uint32_t trailing_samples_drop;
  	bool notify_on_drain;
-@@ -176,33 +179,102 @@ static const struct snd_compr_codec_caps q6asm_compr_caps = {
+@@ -176,11 +179,32 @@ static const struct snd_compr_codec_caps q6asm_compr_caps = {
  	.descriptor[0].formats = 0,
  };
  
@@ -2802,14 +2760,9 @@ index 9e3d176f5..78fa2e6c6 100644
  
  	switch (opcode) {
  	case ASM_CLIENT_EVENT_CMD_RUN_DONE:
- 		break;
- 	case ASM_CLIENT_EVENT_CMD_EOS_DONE:
--		prtd->state = Q6ASM_STREAM_STOPPED;
- 		break;
- 	case ASM_CLIENT_EVENT_DATA_WRITE_DONE: {
+@@ -191,16 +215,65 @@ static void event_handler(uint32_t opcode, uint32_t token,
  		snd_pcm_period_elapsed(substream);
  		break;
- 		}
  	case ASM_CLIENT_EVENT_DATA_READ_DONE:
 -		snd_pcm_period_elapsed(substream);
 -		if (prtd->state == Q6ASM_STREAM_RUNNING)
@@ -2876,31 +2829,40 @@ index 9e3d176f5..78fa2e6c6 100644
  static int q6asm_dai_prepare(struct snd_soc_component *component,
  			     struct snd_pcm_substream *substream)
  {
-@@ -224,16 +296,13 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -222,26 +295,13 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  	}
  
  	prtd->pcm_count = snd_pcm_lib_period_bytes(substream);
 -	/* rate and channels are sent to audio driver */
 -	if (prtd->state == Q6ASM_STREAM_RUNNING) {
 -		/* clear the previous setup if any  */
--		q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
--		q6asm_unmap_memory_regions(substream->stream,
--					   prtd->audio_client);
--		q6routing_stream_close(soc_prtd->dai_link->id,
--					 substream->stream);
--		prtd->state = Q6ASM_STREAM_STOPPED;
--	}
+-		ret = q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
+-		if (ret < 0) {
+-			dev_err(dev, "Failed to close q6asm stream %d\n", prtd->stream_id);
+-			return ret;
+-		}
+-
+-		ret = q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
+-		if (ret < 0) {
+-			dev_err(dev, "Failed to unmap memory regions for q6asm stream %d\n",
+-				prtd->stream_id);
+-			return ret;
+-		}
 +	/* clear the previous setup if any */
 +	ret = q6asm_dai_pcm_teardown(component, substream, false);
 +	if (ret < 0)
 +		return ret;
-+
+ 
+-		q6routing_stream_close(soc_prtd->dai_link->id,
+-					 substream->stream);
+-		prtd->state = Q6ASM_STREAM_STOPPED;
+-	}
 +	/* ALSA resets appl_ptr for every prepare, including xrun recovery. */
 +	prtd->queue_ptr = 0;
  
  	ret = q6asm_map_memory_regions(substream->stream, prtd->audio_client,
  				       prtd->phys,
-@@ -245,6 +314,7 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -253,6 +313,7 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  							ret);
  		return -ENOMEM;
  	}
@@ -2908,7 +2870,7 @@ index 9e3d176f5..78fa2e6c6 100644
  
  	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
  		ret = q6asm_open_write(prtd->audio_client, prtd->stream_id,
-@@ -258,16 +328,18 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -266,16 +327,18 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  
  	if (ret < 0) {
  		dev_err(dev, "%s: q6asm_open_write failed\n", __func__);
@@ -2929,7 +2891,7 @@ index 9e3d176f5..78fa2e6c6 100644
  
  	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
  		ret = q6asm_media_format_block_multi_ch_pcm(
-@@ -280,26 +352,29 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+@@ -288,24 +351,29 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
  							   runtime->rate,
  							   runtime->channels,
  							   prtd->bits_per_sample);
@@ -2964,8 +2926,6 @@ index 9e3d176f5..78fa2e6c6 100644
 -	q6asm_cmd(prtd->audio_client, prtd->stream_id,  CMD_CLOSE);
 -open_err:
 -	q6asm_unmap_memory_regions(substream->stream, prtd->audio_client);
--	q6asm_audio_client_free(prtd->audio_client);
--	prtd->audio_client = NULL;
 +	prtd->state = Q6ASM_STREAM_RUNNING;
 +	return 0;
  
@@ -2974,15 +2934,7 @@ index 9e3d176f5..78fa2e6c6 100644
  	return ret;
  }
  
-@@ -341,7 +416,6 @@ static int q6asm_dai_trigger(struct snd_soc_component *component,
- 				       0, 0, 0);
- 		break;
- 	case SNDRV_PCM_TRIGGER_STOP:
--		prtd->state = Q6ASM_STREAM_STOPPED;
- 		ret = q6asm_cmd_nowait(prtd->audio_client, prtd->stream_id,
- 				       CMD_EOS);
- 		break;
-@@ -452,22 +526,10 @@ static int q6asm_dai_open(struct snd_soc_component *component,
+@@ -457,22 +525,10 @@ static int q6asm_dai_open(struct snd_soc_component *component,
  static int q6asm_dai_close(struct snd_soc_component *component,
  			   struct snd_pcm_substream *substream)
  {
@@ -2992,12 +2944,12 @@ index 9e3d176f5..78fa2e6c6 100644
 +	struct q6asm_dai_rtd *prtd = substream->runtime->private_data;
  
 -	if (prtd->audio_client) {
--		if (prtd->state)
+-		if (prtd->state == Q6ASM_STREAM_RUNNING) {
 -			q6asm_cmd(prtd->audio_client, prtd->stream_id,
 -				  CMD_CLOSE);
--
--		q6asm_unmap_memory_regions(substream->stream,
+-			q6asm_unmap_memory_regions(substream->stream,
 -					   prtd->audio_client);
+-		}
 -		q6asm_audio_client_free(prtd->audio_client);
 -		prtd->audio_client = NULL;
 -	}
@@ -3008,7 +2960,7 @@ index 9e3d176f5..78fa2e6c6 100644
  	kfree(prtd);
  	return 0;
  }
-@@ -480,11 +542,10 @@ static snd_pcm_uframes_t q6asm_dai_pointer(struct snd_soc_component *component,
+@@ -485,11 +541,10 @@ static snd_pcm_uframes_t q6asm_dai_pointer(struct snd_soc_component *component,
  	struct q6asm_dai_rtd *prtd = runtime->private_data;
  	snd_pcm_uframes_t ptr;
  
@@ -3023,72 +2975,8 @@ index 9e3d176f5..78fa2e6c6 100644
  }
  
  static int q6asm_dai_hw_params(struct snd_soc_component *component,
-@@ -555,8 +616,6 @@ static void compress_event_handler(uint32_t opcode, uint32_t token,
- 			snd_compr_drain_notify(prtd->cstream);
- 			prtd->notify_on_drain = false;
- 
--		} else {
--			prtd->state = Q6ASM_STREAM_STOPPED;
- 		}
- 		break;
- 
-@@ -674,7 +733,7 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
- 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
- 
- 	if (prtd->audio_client) {
--		if (prtd->state) {
-+		if (prtd->state == Q6ASM_STREAM_RUNNING) {
- 			q6asm_cmd(prtd->audio_client, prtd->stream_id,
- 				  CMD_CLOSE);
- 			if (prtd->next_track_stream_id) {
-@@ -682,11 +741,11 @@ static int q6asm_dai_compr_free(struct snd_soc_component *component,
- 					  prtd->next_track_stream_id,
- 					  CMD_CLOSE);
- 			}
--		}
- 
--		snd_dma_free_pages(&prtd->dma_buffer);
--		q6asm_unmap_memory_regions(stream->direction,
-+			q6asm_unmap_memory_regions(stream->direction,
- 					   prtd->audio_client);
-+		}
-+		snd_dma_free_pages(&prtd->dma_buffer);
- 		q6asm_audio_client_free(prtd->audio_client);
- 		prtd->audio_client = NULL;
- 	}
-@@ -916,7 +975,7 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
- 			      prtd->session_id, dir);
- 	if (ret) {
- 		dev_err(dev, "Stream reg failed ret:%d\n", ret);
--		goto q6_err;
-+		goto routing_err;
- 	}
- 
- 	ret = __q6asm_dai_compr_set_codec_params(component, stream,
-@@ -942,11 +1001,11 @@ static int q6asm_dai_compr_set_params(struct snd_soc_component *component,
- 	return 0;
- 
- q6_err:
-+	q6routing_stream_close(rtd->dai_link->id, dir);
-+routing_err:
- 	q6asm_cmd(prtd->audio_client, prtd->stream_id, CMD_CLOSE);
- 
- open_err:
--	q6asm_audio_client_free(prtd->audio_client);
--	prtd->audio_client = NULL;
- 	return ret;
- }
- 
-@@ -1014,7 +1073,6 @@ static int q6asm_dai_compr_trigger(struct snd_soc_component *component,
- 				       0, 0, 0);
- 		break;
- 	case SNDRV_PCM_TRIGGER_STOP:
--		prtd->state = Q6ASM_STREAM_STOPPED;
- 		ret = q6asm_cmd_nowait(prtd->audio_client, prtd->stream_id,
- 				       CMD_EOS);
- 		break;
 diff --git a/sound/soc/qcom/qdsp6/q6asm.c b/sound/soc/qcom/qdsp6/q6asm.c
-index de0bd8fd0..694402844 100644
+index de0bd8fd08ee..694402844a20 100644
 --- a/sound/soc/qcom/qdsp6/q6asm.c
 +++ b/sound/soc/qcom/qdsp6/q6asm.c
 @@ -514,6 +514,8 @@ int q6asm_map_memory_regions(unsigned int dir, struct audio_client *ac,
@@ -3193,7 +3081,7 @@ index de0bd8fd0..694402844 100644
  	return rc;
  }
 diff --git a/sound/soc/qcom/qdsp6/q6routing.c b/sound/soc/qcom/qdsp6/q6routing.c
-index 738622604..bed7b9554 100644
+index 7386226046fa..bed7b95543c1 100644
 --- a/sound/soc/qcom/qdsp6/q6routing.c
 +++ b/sound/soc/qcom/qdsp6/q6routing.c
 @@ -373,6 +373,9 @@ int q6routing_stream_open(int fedai_id, int perf_mode,

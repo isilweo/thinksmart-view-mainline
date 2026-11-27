@@ -4,6 +4,14 @@ All changes live as commits in
 [isilweo/linux](https://github.com/isilweo/linux), a fork of
 [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux):
 
+- `tsv71/device`: msm8953-mainline `v7.1.3-r0` plus 52 commits, the series
+  below moved to 7.1.3; see [Kernel 7.1.3](#kernel-713);
+- `tsv71/debug`: `tsv71/device` plus the same three local debug commits;
+- tag `tsv-v7.1.3-r1`: `tsv71/debug` as built into the postmarketOS package
+  `linux-postmarketos-qcom-msm8953-7.1.3-r1` that runs on our tablets.
+
+The 7.0.9 series stays as it was at r120 and is no longer updated:
+
 - `tsv/device`: msm8953-mainline `v7.0.9-r0` plus 56 commits, one change
   each. It includes the review fixes described below (since r80: the former
   local branches `fix/vcnl`, `fix/venus` and `fix/venus-drc`; since r93:
@@ -14,8 +22,7 @@ All changes live as commits in
   Venus `fw_debug` parameter, qdsp6 dynamic debug traces, the SDIO probe stage
   on -110);
 - tag `tsv-v7.0.9-r120`: `tsv/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.0.9-r120` that runs on our tablets.
-  Earlier releases: `tsv-v7.0.9-r93` (q6asm backports, watchdog and Wi-Fi DT),
+  `linux-postmarketos-qcom-msm8953-7.0.9-r120`. Earlier releases: `tsv-v7.0.9-r93` (q6asm backports, watchdog and Wi-Fi DT),
   `tsv-v7.0.9-r80` (Venus and VCNL4200 fixes) and `tsv-v7.0.9-r39` (before the
   review fixes).
 
@@ -36,7 +43,7 @@ there, together with its author Felix Kaechele.
 ## Review
 
 A review of the whole series with Codex (OpenAI, gpt-6.2-astra) found these
-issues. Commit numbers refer to `tsv/device` as it is now. The VCNL4200
+issues. Commit numbers refer to `tsv/device` (7.0.9) as it is now. The VCNL4200
 issues (23-25, 29) are fixed on the local branch `fix/vcnl`, which is not in
 `tsv/device` yet; see [VCNL4200 fixes](#vcnl4200-fixes-branch-fixvcnl). The
 Venus issues (2, 8, 9) are fixed on the local branch `fix/venus`; see
@@ -254,3 +261,39 @@ settings), the ADSP sensor driver (VCNL4200 LED settings) and the camera
 library `libmmcamera_s5kc505a.so` (the S5KC505A register tables, which are
 also published in rebrch/tsv-nura). Measurements on our units are identified
 separately.
+
+## Kernel 7.1.3
+
+`tsv71/device` is `tsv/device` (r120) cherry-picked onto msm8953-mainline
+`v7.1.3-r0`, the newest release of that tree. Of the 56 commits:
+
+- 47 applied unchanged;
+- 4 were dropped because 7.1.3 already has them: the three q6asm-dai fixes
+  from mainline (Srinivas Kandagatla: no stream state in the event and
+  trigger callbacks, close the stream only when running, error handling in
+  prepare and set_params) and the VCNL4000 regulator binding;
+- 5 VCNL4000 commits had conflicts with the driver changes in 7.1 (upstream
+  `vdd`/`vio`/`vled` support, `devm_mutex_init()`, the measurement switched on
+  in probe instead of init). Of the regulator backport only the `static` for
+  `regulator_names` was left. The other four keep their behaviour: the 2.5 ms
+  start-up delay before the first I2C access, the runtime PM reference while
+  threshold events are enabled, powering down on a late probe failure, and
+  the low-power IR LED settings. A separate review compared each of them
+  with the 7.0.9 version and found no difference in behaviour.
+
+One q6asm-dai commit only differs in context. `git range-diff` shows the
+other 46 as identical. All eight security review fixes from r120 are in.
+
+Running on all five units. After boot on each unit, these came up with no
+failed services: Wi-Fi (card powered off before probe), Bluetooth, watchdog,
+display, touch, VCNL4200, BMA253, the camera and Venus video nodes, and the
+speaker and stereo microphone in PipeWire. On unit 5 the camera ran at
+30 fps, capture and playback worked, and the Venus test series from r120
+(decoder, resolution change, RTP, encoder) passed 48/48 with Venus suspended
+after each run. Unit 5 then ran a day without new kernel errors.
+
+Kernel.org lists 7.0 and 7.1 as end of life. msm8953-mainline has a 7.3
+development branch but no 7.3 release yet. The 7.3 changes in Venus, TAS5805M
+and VCNL4000 are clean-ups or for other SoCs; the HFI parser size fixes there
+are already covered by the parser bounds checks in this series. The next step
+is the 7.3 release of msm8953-mainline.
