@@ -21,26 +21,26 @@ echo canceller and RNNoise, and `iperf3` over Wi-Fi.
 CPU frequency is capped at 1.8 GHz (`boost` is 0). The display app gets very
 little CPU and GPU time while everything runs at once.
 
-## GPU hangs
+## GPU hangs (solved)
 
-The Adreno 506 hangs under `EGL_PLATFORM=surfaceless peglgears`, which renders
-offscreen without any frame limit. The msm hangcheck detects the hang
-mid-render (about 2-3 s into a run) and recovers the GPU, and the program goes
-on. It happens in almost every run:
+Under `EGL_PLATFORM=surfaceless peglgears`, which renders offscreen without
+any frame limit, the msm hangcheck reported `gpu lockup` and reset the GPU in
+almost every 5 s run: 6 in 11 on 7.0.9, 10 in 10 on 7.3. Neither the GPU clock
+(320-650 MHz) nor a single ringbuffer nor `FD_MESA_DEBUG=sysmem`/`nobin` made a
+difference. After a reset our Flutter display app stopped drawing until it
+was restarted.
 
-| Kernel | Hangs |
-|---|---|
-| 7.0.9 (r120) | 6 in 11 runs |
-| 7.3 | 10 in 10 runs |
-| 7.3 with one ringbuffer (no preemption) | 11 in 10 runs |
+It was not a hang. With `hangcheck_period_ms` (debugfs) raised from 500 to
+1000 or 2000 ms the same runs finished with the same frame rate and no reset,
+0 in 20. Single submits simply took longer than the period. drm/msm can ask
+the GPU whether the CP still makes progress before it declares a hang, but
+only a6xx implements that callback.
 
-It is independent of the GPU clock: capped at 650, 560, 510, 400 and 320 MHz
-the runs still hang. `FD_MESA_DEBUG=sysmem` and `nobin` (Mesa 26.1.6) do not
-avoid it either. So it is neither a clock or voltage problem nor new in 7.x.
-Normal use (the display app, `es2gears` at 60 fps) had no hangs in a week on
-five units.
+"drm/msm/a5xx: add a progress callback for hang detection" adds it for a5xx.
+With it, at the default period: 0 resets in 15 runs on 7.3 (unit 5) and 0 in
+5 on 7.1.3 (unit 4), at the same frame rate. A CP that is really stuck reads
+the same registers and is still reset after the progress retries; that case
+was not reproduced.
 
-After a recovery our Flutter display app stopped drawing until it was
-restarted. A devcoredump from 7.3 shows ring 2 with 160 dwords written and
-none read (`rptr 0`, `wptr 160`). It is not decoded yet; `crashdec` from Mesa
-would show the state of the command processor.
+The analysis of a devcoredump (Codex, with Mesa's `crashdec`) is what pointed
+to a long submit; the dump itself was truncated before the register section.

@@ -4,11 +4,12 @@ All changes live as commits in
 [isilweo/linux](https://github.com/isilweo/linux), a fork of
 [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux):
 
-- `tsv71/device`: msm8953-mainline `v7.1.3-r0` plus 52 commits, the series
+- `tsv71/device`: msm8953-mainline `v7.1.3-r0` plus 55 commits (the 52 moved
+  from 7.0.9, two DT fixes and the a5xx hangcheck fix below), the series
   below moved to 7.1.3; see [Kernel 7.1.3](#kernel-713);
 - `tsv71/debug`: `tsv71/device` plus the same three local debug commits;
-- tag `tsv-v7.1.3-r1`: `tsv71/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.1.3-r1` that runs on our tablets.
+- tag `tsv-v7.1.3-r2`: `tsv71/debug` as built into the postmarketOS package
+  `linux-postmarketos-qcom-msm8953-7.1.3-r2` that runs on our tablets.
 
 The 7.0.9 series stays as it was at r120 and is no longer updated:
 
@@ -302,7 +303,7 @@ is the 7.3 release of msm8953-mainline.
 
 `tsv73/device` is the series on msm8953-mainline `barni2000/7.3/develop` at
 `9e921a3c1eeb` (a development branch; there is no 7.3 release of that tree
-yet), plus one fix for 7.3 and the two DT commits below. Tag `tsv-v7.3.0-r4`
+yet), plus one fix for 7.3 and the two DT commits below. Tag `tsv-v7.3.0-r5`
 (`tsv73/debug`) runs on one unit.
 
 - Two VCNL4000 commits were dropped: 7.3 already makes `regulator_names`
@@ -328,5 +329,16 @@ Two DT commits, on `tsv73/device` and `tsv71/device`:
   (`qcom,hphl-jack-type-normally-open`). The device has no headphone jack, but
   the codec used to report a plug from boot.
 
-Both were checked on unit 5 with 7.3. The 7.1.3 package (`tsv-v7.1.3-r1`) does
-not have them yet.
+Both were checked on unit 5 with 7.3 and are in `tsv-v7.1.3-r2` on the other
+four units.
+
+## a5xx hangcheck progress
+
+"drm/msm/a5xx: add a progress callback for hang detection", on `tsv71/device`
+and `tsv73/device`. The msm hangcheck resets the GPU when no submit finishes
+within one period (500 ms). Only a6xx implements the `progress` callback that
+lets the core see a CP that is still working, so on a5xx every long submit was
+reset as a hang. `a5xx_progress()` compares the CP IB1/IB2 base and remaining
+size between checks, like `a6xx_progress()`. See
+[stress-test.md](stress-test.md#gpu-hangs-solved). This one is not specific to the
+ThinkSmart View; it would go to the drm/msm list.

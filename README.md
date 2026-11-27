@@ -13,9 +13,9 @@ on.
 - **Kernel source:** [isilweo/linux](https://github.com/isilweo/linux), a fork
   of [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux).
   Branch `tsv71/device` (one commit per change on `v7.1.3-r0`), `tsv71/debug`
-  (plus local debug commits), tag `tsv-v7.1.3-r1` (what runs on our tablets).
+  (plus local debug commits), tag `tsv-v7.1.3-r2` (what runs on our tablets).
   The 7.0.9 series (`tsv/device`, `tsv/debug`, tag `tsv-v7.0.9-r120`) is kept
-  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r4`) runs
+  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r5`) runs
   on one unit for testing; see
   [docs/upstream-status.md](docs/upstream-status.md#kernel-73-test).
 - **This repository:** how to build and install it, a postmarketOS overlay in
@@ -32,7 +32,7 @@ on.
 | Wi-Fi (QCA9379) | No boot failures in 30 warm reboots each on two units (it used to fail in up to half of the boots on one) | [docs/wifi.md](docs/wifi.md) |
 | APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |
 | Mic mute switch, camera lens cover | Input switches (`SW_MUTE_DEVICE`, `SW_CAMERA_LENS_COVER`); the mute switch cuts the microphones in hardware | [docs/sensors.md](docs/sensors.md) |
-| GPU (Adreno 506) | Works for normal use; hangs under unthrottled offscreen rendering | [docs/stress-test.md](docs/stress-test.md) |
+| GPU (Adreno 506) | Works; long submits are no longer reset as hangs (a5xx progress check, since 7.1.3-r2) | [docs/stress-test.md](docs/stress-test.md) |
 
 Not done: steered beamforming with the two DMICs (the mono downmix already
 sums them). The kernel changes are not upstream
@@ -60,7 +60,7 @@ those files.
 INSTALL.md
 docs/                    notes per topic, upstream status
 pmaports/                postmarketOS overlay (pmaports v26.06):
-  device/community/linux-postmarketos-qcom-msm8953/   kernel 7.1.3-r1: patch from isilweo/linux + config
+  device/community/linux-postmarketos-qcom-msm8953/   kernel 7.1.3-r2: patch from isilweo/linux + config
   device/community/thinksmart-view-extras/           Wi-Fi boot guard, watchdog setting, echo cancellation
   temp/libcamera/                                      libcamera 0.8.0 with the S5KC505A helper and tuning
   temp/pipewire/                                       PipeWire 1.6.11 (Alpine edge) for libcamera 0.8 on v26.06
