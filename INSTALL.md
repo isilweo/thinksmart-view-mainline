@@ -72,7 +72,8 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
      v26.06 the Alpine 3.24 PipeWire is built against libcamera 0.7 and blocks
      the upgrade. Build it after libcamera;
    - `thinksmart-view-extras`: Wi-Fi boot guard and the systemd watchdog
-     setting; `thinksmart-view-extras-echo-cancel`: PipeWire echo cancellation.
+     setting; `thinksmart-view-extras-echo-cancel`: PipeWire echo cancellation;
+     `thinksmart-view-extras-noise-suppression`: RNNoise after it.
 2. `soc-qcom-msm8953`: set the UCM `provider_priority=10`, otherwise apk may pick
    `alsa-ucm-conf-unisoc-ums9230`.
 3. Build:
@@ -81,8 +82,9 @@ pmbootstrap (git main) with pmaports branch `v26.06`.
    pmbootstrap build linux-postmarketos-qcom-msm8953 libcamera soc-qcom-msm8953 thinksmart-view-extras --force
    pmbootstrap build pipewire --force
    ```
-4. Add `thinksmart-view-extras` (and `thinksmart-view-extras-echo-cancel` if you
-   want it) to `extra_packages` below.
+4. Add `thinksmart-view-extras` (and `thinksmart-view-extras-echo-cancel` and
+   `thinksmart-view-extras-noise-suppression` if you want them) to
+   `extra_packages` below.
 5. The relevant parts of our `pmbootstrap_v3.cfg`:
    ```ini
    [pmbootstrap]

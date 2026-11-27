@@ -25,12 +25,13 @@ on.
 |---|---|---|
 | Front camera S5KC505A | 1304x980 at 30 fps, libcamera 0.8.0 SoftISP, calibrated colour | [docs/camera.md](docs/camera.md) |
 | Venus H.264 encoder, H.264/H.265 decoder | Hardware encode and decode, RTSP doorbell streams | [docs/venus.md](docs/venus.md) |
-| Speaker, microphones | TAS5782M speaker; full duplex with WebRTC echo cancellation (20/20 cycles on one unit) | [docs/audio.md](docs/audio.md) |
+| Speaker, microphones | TAS5782M speaker; full duplex with WebRTC echo cancellation (20/20 cycles on one unit) and RNNoise noise suppression | [docs/audio.md](docs/audio.md) |
 | Proximity and light (VCNL4200), accelerometer, touch | Working; light reads only straight ahead | [docs/sensors.md](docs/sensors.md) |
 | Wi-Fi (QCA9379) | No boot failures in 30 warm reboots each on two units (it used to fail in up to half of the boots on one) | [docs/wifi.md](docs/wifi.md) |
 | APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |
 
-Not done: beamforming with the two DMICs. The kernel changes are not upstream
+Not done: steered beamforming with the two DMICs (the mono downmix already
+sums them). The kernel changes are not upstream
 yet; a review of the whole series found bugs, which are fixed since r80, r93 and r120 (7.0.9), and
 points the maintainers would still raise: see
 [docs/upstream-status.md](docs/upstream-status.md).

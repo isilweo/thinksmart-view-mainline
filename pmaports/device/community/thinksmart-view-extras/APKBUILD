@@ -1,18 +1,19 @@
 # Lenovo ThinkSmart View (CD-18781Y) helpers for postmarketOS
 pkgname=thinksmart-view-extras
 pkgver=1
-pkgrel=1
-pkgdesc="Lenovo ThinkSmart View: Wi-Fi boot guard, APSS watchdog for systemd, echo cancellation"
+pkgrel=2
+pkgdesc="Lenovo ThinkSmart View: Wi-Fi boot guard, APSS watchdog for systemd, echo cancellation, noise suppression"
 url="https://github.com/isilweo/thinksmart-view-mainline"
 arch="noarch"
 license="CC0-1.0"
 options="!check"
-subpackages="$pkgname-echo-cancel:echo_cancel"
+subpackages="$pkgname-echo-cancel:echo_cancel $pkgname-noise-suppression:noise_suppression"
 source="
 	wifi-guard
 	wifi-guard.service
 	80-apss-watchdog.conf
 	60-echo-cancel.conf
+	61-noise-suppression.conf
 	thinksmart-view-extras.preset
 "
 
@@ -33,10 +34,18 @@ echo_cancel() {
 	install -Dm644 "$srcdir"/60-echo-cancel.conf \
 		"$subpkgdir"/usr/share/pipewire/pipewire.conf.d/60-echo-cancel.conf
 }
+
+noise_suppression() {
+	pkgdesc="Lenovo ThinkSmart View: RNNoise noise suppression after the echo canceller"
+	depends="$pkgname-echo-cancel=$pkgver-r$pkgrel noise-suppression-for-voice pipewire-filter-graph-ladspa"
+	install -Dm644 "$srcdir"/61-noise-suppression.conf \
+		"$subpkgdir"/usr/share/pipewire/pipewire.conf.d/61-noise-suppression.conf
+}
 sha512sums="
 89c6247722dc19d158876b0258895326eeef09f305f0875502112d442282d39dc0d58be8497b1d44fd94681a46aec05b57bf33876d75db3be919e172987400cd  wifi-guard
 8ba16467fbc35ada1a91689b3916928777156bf8a97ec1604fec3c75da0783cf10cf47a0b608aaca3e5ffe8d74e55f98cc063d801d8e891f36cd2fb320a725b1  wifi-guard.service
 c3a82e3bf98ff7485d684563e3c840716c7b2e20ddf128640c23a4cfc7e97e43613db9f3a6277372d55c8bdb22547d22da3393ae240728ba12d6df652150b6a8  80-apss-watchdog.conf
 ed042d8cef8e8525a02c43acdefb001791277e5b5d8138fb15f265d6233256ef70a3352c1c834813f913b14ae9ae4feb60748ed6e550b905004332745221c9f8  60-echo-cancel.conf
+51d5baeeb04d5c7e0a8035c67029a919e2393d5597075c029b7915d533b2e3b39e73c3e841e6864c494f65e62f60b0353d78f2797f5d5d54594a07bd2e1abbda  61-noise-suppression.conf
 fc65f8dfaa3751d78ba36cd590f5d3e31f9d0d42bcfe52e5504bd63067a194d0c305053a102591a9af66e88d9bd9bbe9b848042b736000f7d6714b8f8485d930  thinksmart-view-extras.preset
 "
