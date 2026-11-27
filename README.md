@@ -15,7 +15,9 @@ on.
   Branch `tsv71/device` (one commit per change on `v7.1.3-r0`), `tsv71/debug`
   (plus local debug commits), tag `tsv-v7.1.3-r1` (what runs on our tablets).
   The 7.0.9 series (`tsv/device`, `tsv/debug`, tag `tsv-v7.0.9-r120`) is kept
-  but no longer updated.
+  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r4`) runs
+  on one unit for testing; see
+  [docs/upstream-status.md](docs/upstream-status.md#kernel-73-test).
 - **This repository:** how to build and install it, a postmarketOS overlay in
   `pmaports/`, and notes per topic in `docs/`.
 
@@ -29,6 +31,8 @@ on.
 | Proximity and light (VCNL4200), accelerometer, touch | Working; light reads only straight ahead | [docs/sensors.md](docs/sensors.md) |
 | Wi-Fi (QCA9379) | No boot failures in 30 warm reboots each on two units (it used to fail in up to half of the boots on one) | [docs/wifi.md](docs/wifi.md) |
 | APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |
+| Mic mute switch, camera lens cover | Input switches (`SW_MUTE_DEVICE`, `SW_CAMERA_LENS_COVER`); the mute switch cuts the microphones in hardware | [docs/sensors.md](docs/sensors.md) |
+| GPU (Adreno 506) | Works for normal use; hangs under unthrottled offscreen rendering | [docs/stress-test.md](docs/stress-test.md) |
 
 Not done: steered beamforming with the two DMICs (the mono downmix already
 sums them). The kernel changes are not upstream

@@ -297,3 +297,36 @@ development branch but no 7.3 release yet. The 7.3 changes in Venus, TAS5805M
 and VCNL4000 are clean-ups or for other SoCs; the HFI parser size fixes there
 are already covered by the parser bounds checks in this series. The next step
 is the 7.3 release of msm8953-mainline.
+
+## Kernel 7.3 (test)
+
+`tsv73/device` is the series on msm8953-mainline `barni2000/7.3/develop` at
+`9e921a3c1eeb` (a development branch; there is no 7.3 release of that tree
+yet), plus one fix for 7.3 and the two DT commits below. Tag `tsv-v7.3.0-r4`
+(`tsv73/debug`) runs on one unit.
+
+- Two VCNL4000 commits were dropped: 7.3 already makes `regulator_names`
+  static and powers the sensor down on a late probe failure through a devm
+  action. The other VCNL4000 commits were adapted to the 7.3 driver
+  (`guard()`, no `vcnl4000_set_pm_runtime_state()`). The HFI parser commit was
+  adapted to the upstream size fixes in `parse_caps()`, `parse_alloc_mode()`
+  and `parse_raw_formats()`. The camss buffer size commit was adapted to 7.3.
+- 7.3 breaks the Venus encoder on MSM8953 for frames of 960x540 and larger;
+  see [venus.md](venus.md#notes). `tsv73/device` restores the NV12 padding.
+- The q6asm-dai full-duplex fixes are not in 7.3 either and are carried here.
+- On unit 5: all devices come up, the Venus test series passes 48/48 with
+  the padding fix, and the encoder works from 640x480 to 1920x1080.
+
+## Board DT: mute switch and headphone jack
+
+Two DT commits, on `tsv73/device` and `tsv71/device`:
+
+- the microphone mute switch is reported as `SW_MUTE_DEVICE`, 1 while muted.
+  It cuts both DMICs in hardware; it used to be `SW_MICROPHONE_INSERT` with
+  0 while muted, so userspace saw a missing microphone;
+- the codec treats the unconnected HPHL detect line as a normally open jack
+  (`qcom,hphl-jack-type-normally-open`). The device has no headphone jack, but
+  the codec used to report a plug from boot.
+
+Both were checked on unit 5 with 7.3. The 7.1.3 package (`tsv-v7.1.3-r1`) does
+not have them yet.

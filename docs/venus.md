@@ -10,6 +10,13 @@
 
 ## Notes
 
+- On 7.3, e1c9adabb268 ("media: qcom: venus: drop extra padding in NV12 raw
+  size calculation") breaks the encoder on MSM8953: from 960x540 up it takes
+  input buffers but never returns encoded ones (640x480 and 800x600 still
+  work). `tsv73/device` restores the SZ_4K/SZ_8K padding ("media: venus: keep
+  the NV12 padding for the raw frame size"); with it the encoder works up to
+  1920x1080 and the Venus test series passes 48/48.
+
 - Since r120 the encoder stays powered while a session streams, and the
   decoder while its input queue streams. On r93 and earlier, Venus runtime
   suspend (2 s after the last buffer) cut the vcodec clocks under a live

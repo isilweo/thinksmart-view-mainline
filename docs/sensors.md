@@ -6,6 +6,10 @@
 | Ambient light (VCNL4200) | Works, but the window has a narrow field of view straight ahead: it reads light from in front of the screen, not the room. Rough check against a phone: 15 lx gives 3, 158 lx gives 91, 260 lx gives 255 at 400 ms integration time. Good for dark/dim/bright, not for lux. |
 | Accelerometer BMA253 | Mount matrix added; iio-sensor-proxy reports the right orientation. |
 | Touch | Both FT8201 and HX83100A nodes enabled; the fitted one probes. The other one fails with -16, which is harmless. |
+| Microphone mute switch | Cuts both DMICs in hardware (capture is digital silence while it is on). Reported by `gpio-keys` as `SW_MUTE_DEVICE`, 1 while muted (it used to be `SW_MICROPHONE_INSERT` with 0 while muted). |
+| Camera lens cover | Reported by `gpio-keys` as `SW_CAMERA_LENS_COVER`, 1 while covered. |
+| Buttons | Volume up through `gpio-keys`, volume down through `pm8941_resin`. |
+| Headphone jack | There is none. The sound card still registers a "Headset Jack" input device; the codec now treats its unconnected detect line as a normally open jack, so it no longer reports a plug. |
 
 Both sensors sit on a GPIO I²C bus. The base DT used the wrong pins (14/15)
 for it; it is on GPIO 6/7. The VCNL4200 LED settings (8T duty, two pulses,
