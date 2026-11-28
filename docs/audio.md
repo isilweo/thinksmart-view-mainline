@@ -65,7 +65,7 @@ tools/tas5782m-eq-patch.py tas5728m_dsp_lenovo_cd-18781y.bin flat.bin \
 tas5782m-rca.py build flat.bin tas5782mRCA1.bin
 ```
 
-Run on one unit (unit 5).
+Measured on unit 5; the same EQ runs on all five units.
 
 **Louder than 0 dB.** The bass distorts at full scale already at 0 dB: with
 the factory EQ, THD (H2-H5) at 0 dBFS is 18 % at 100 Hz, 6.0 % at 150 Hz and

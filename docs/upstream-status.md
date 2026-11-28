@@ -9,7 +9,8 @@ All changes live as commits in
   below moved to 7.1.3; see [Kernel 7.1.3](#kernel-713);
 - `tsv71/debug`: `tsv71/device` plus the same three local debug commits;
 - tag `tsv-v7.1.3-r2`: `tsv71/debug` as built into the postmarketOS package
-  `linux-postmarketos-qcom-msm8953-7.1.3-r2` that runs on our tablets.
+  `linux-postmarketos-qcom-msm8953-7.1.3-r2` (the package in `pmaports/`; since
+  2026-11-28 our tablets run 7.3, see [Kernel 7.3](#kernel-73-test)).
 
 The 7.0.9 series stays as it was at r120 and is no longer updated:
 
@@ -304,7 +305,8 @@ is the 7.3 release of msm8953-mainline.
 `tsv73/device` is the series on msm8953-mainline `barni2000/7.3/develop` at
 `9e921a3c1eeb` (a development branch; there is no 7.3 release of that tree
 yet), plus one fix for 7.3, the DT commits below and the tas2781 speaker
-driver. Tag `tsv-v7.3.0-r8` (`tsv73/debug`) runs on one unit.
+driver. Tag `tsv-v7.3.0-r8` (`tsv73/debug`) ran on unit 5 first and has run on all
+five units since 2026-11-28.
 
 - Two VCNL4000 commits were dropped: 7.3 already makes `regulator_names`
   static and powers the sensor down on a late probe failure through a devm

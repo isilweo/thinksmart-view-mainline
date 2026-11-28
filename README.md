@@ -13,10 +13,11 @@ on.
 - **Kernel source:** [isilweo/linux](https://github.com/isilweo/linux), a fork
   of [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux).
   Branch `tsv71/device` (one commit per change on `v7.1.3-r0`), `tsv71/debug`
-  (plus local debug commits), tag `tsv-v7.1.3-r2` (what runs on our tablets).
+  (plus local debug commits), tag `tsv-v7.1.3-r2` (the package in `pmaports/`).
   The 7.0.9 series (`tsv/device`, `tsv/debug`, tag `tsv-v7.0.9-r120`) is kept
-  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r8`, with
-  the tas2781 speaker driver) runs on one unit for testing; see
+  but no longer updated. The 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r8`, with
+  the tas2781 speaker driver and the flat DSP EQ) runs on all five units since
+  2026-11-28; see
   [docs/upstream-status.md](docs/upstream-status.md#kernel-73-test).
 - **This repository:** how to build and install it, a postmarketOS overlay in
   `pmaports/`, and notes per topic in `docs/`.
