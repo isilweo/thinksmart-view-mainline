@@ -79,6 +79,91 @@ placements, so compare the trend, not single values). A steeper high-pass (about
 goes on top as a PipeWire filter-chain (the builtin `bq_*` filters, or
 `bq_raw` with the factory coefficients to get the vendor sound back).
 
+### Music profile with psychoacoustic bass
+
+Below about 150 Hz the speaker gives little output, and what it gives
+distorts (see above). For music we replace real bass with its harmonics:
+Calf Bass Enhancer adds harmonics of everything below 150 Hz, and a 120 Hz
+high-pass after it removes the fundamentals. The ear fills in the missing
+fundamental, so bass lines stay audible while the cone stays out of the
+distorting range. Around it: -3 dB preamp for headroom, +3 dB at 200 Hz,
++2.5 dB at 4.5 kHz and -2 dB at 9 kHz, mono. The values were picked by ear
+from several variants on the flat EQ above.
+
+The chain is a separate sink that plays into the echo canceller, so echo
+cancellation keeps working during music. It has a low priority, so it never
+becomes the default sink; only the media player is routed to it, and speech
+and alarms stay on the flat curve. `/etc/pipewire/pipewire.conf.d/62-music.conf`:
+
+```
+context.modules = [
+    { name = libpipewire-module-filter-chain
+        flags = [ nofail ]
+        args = {
+            node.description = "Speaker (music)"
+            media.name = "Speaker (music)"
+            filter.graph = {
+                nodes = [
+                    { type = builtin name = pre label = linear control = { "Mult" = 0.708 } }
+                    { type = lv2 name = be plugin = "http://calf.sourceforge.net/plugins/BassEnhancer"
+                      control = { "amount" = 2.0 "freq" = 150.0 "drive" = 8.5 "blend" = 0.0 } }
+                    { type = builtin name = mix label = mixer control = { "Gain 1" = 0.5 "Gain 2" = 0.5 } }
+                    { type = builtin name = hp label = bq_highpass control = { "Freq" = 120.0 "Q" = 0.707 } }
+                    { type = builtin name = low label = bq_peaking control = { "Freq" = 200.0 "Q" = 0.9 "Gain" = 3.0 } }
+                    { type = builtin name = mid label = bq_peaking control = { "Freq" = 4500.0 "Q" = 1.4 "Gain" = 2.5 } }
+                    { type = builtin name = top label = bq_peaking control = { "Freq" = 9000.0 "Q" = 1.5 "Gain" = -2.0 } }
+                ]
+                links = [
+                    { output = "pre:Out" input = "be:in_l" }
+                    { output = "pre:Out" input = "be:in_r" }
+                    { output = "be:out_l" input = "mix:In 1" }
+                    { output = "be:out_r" input = "mix:In 2" }
+                    { output = "mix:Out" input = "hp:In" }
+                    { output = "hp:Out" input = "low:In" }
+                    { output = "low:Out" input = "mid:In" }
+                    { output = "mid:Out" input = "top:In" }
+                ]
+                inputs = [ "pre:In" ]
+                outputs = [ "top:Out" ]
+            }
+            audio.rate = 48000
+            audio.channels = 1
+            audio.position = [ MONO ]
+            capture.props = {
+                node.name = "music-sink"
+                media.class = Audio/Sink
+                priority.session = 1
+                priority.driver = 1
+            }
+            playback.props = {
+                node.name = "music-sink-out"
+                node.passive = true
+                target.object = "echo-cancel-sink"
+            }
+        }
+    }
+]
+```
+
+The Bass Enhancer is a stereo plugin, so the mono signal goes into both
+inputs and the mixer sums the outputs back to mono. To route a player there,
+match its stream in `/etc/pipewire/client.conf.d/62-music.conf` (this works
+for clients such as GStreamer's `pipewiresink`; WirePlumber's `stream.rules`
+only apply when it restores a stream):
+
+```
+stream.rules = [
+    { matches = [ { media.name = "my-player" } ]
+      actions = { update-props = { target.object = "music-sink" } } }
+]
+```
+
+Packages: `calf-lv2` and `lilv` from the repository, plus
+`pipewire-filter-graph-builtin` and `pipewire-filter-graph-lv2` from the same
+1.6.11 overlay as the rest of PipeWire (see Noise suppression). The `nofail`
+flag keeps PipeWire running if the plugin is missing; the player then plays
+to the default sink.
+
 `soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10). Otherwise
 apk may pick `alsa-ucm-conf-unisoc-ums9230`.
 
