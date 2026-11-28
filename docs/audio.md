@@ -47,8 +47,11 @@ are:
 
 Measured with a calibrated XREF20 microphone at 50 cm, averaged over three
 positions, tablet at the desk edge. The deviation from 200 Hz to 10 kHz drops
-from 3.9 dB RMS to 1.0 dB. Below about 200 Hz the speaker rolls off
-acoustically. The EQ has cuts only, so the flat version is quieter: about
+from 3.9 dB RMS to 1.0 dB. The flat curve is measured directly. The factory
+curve is the same three positions measured with an earlier flat EQ, with the
+exact response of those biquads swapped for the factory ones; the EQ is purely
+digital, so this is a calculation, not an estimate. Below about 200 Hz the
+speaker rolls off acoustically. The EQ has cuts only, so the flat version is quieter: about
 3 dB in the speech band.
 
 [`tools/tas5782m-eq-patch.py`](../tools/tas5782m-eq-patch.py) replaces
@@ -67,10 +70,12 @@ tas5782m-rca.py build flat.bin tas5782mRCA1.bin
 Run on one unit (unit 5). The response depends on what is around the tablet:
 a desk in front of the speaker added a dip at 4-5 kHz.
 
-**Louder than 0 dB.** At +3 dB (register 0x3d = 0x2a), sweeps at -12 to
-0 dBFS showed no compression, but the bass distortion rises. THD at 0 dBFS
-was 23 % at 100 Hz, 7.9 % at 150 Hz, 3.1 % at 200 Hz, and below 1 % from
-300 Hz up. A steeper high-pass (about 130 Hz instead of 70 Hz) would allow
+**Louder than 0 dB.** The bass distorts at full scale already at 0 dB: with
+the factory EQ, THD (H2-H5) at 0 dBFS is 18 % at 100 Hz, 6.0 % at 150 Hz and
+2.3 % at 200 Hz. At +3 dB (register 0x3d = 0x2a, flat EQ) sweeps at -12 to
+0 dBFS showed no compression, but the THD rises to 24 %, 7.6 % and 3.4 %.
+From about 400 Hz up it is around 1 % or less in both cases (two different
+placements, so compare the trend, not single values). A steeper high-pass (about 130 Hz instead of 70 Hz) would allow
 +3 dB; we kept 0 dB.
 
 **Speech vs. music.** The flat DSP EQ is the base. A voice or music profile
