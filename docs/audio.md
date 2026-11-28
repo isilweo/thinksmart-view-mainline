@@ -30,8 +30,8 @@ layout.
 
 The vendor DSP program has four EQ biquads (book 0x8c, page 0x16, registers
 0x1c, 0x30, 0x44, 0x58) that tune the speaker for speech: measured against
-the flat version below, it is 7-9 dB louder from 3 to 5 kHz and 10 dB at
-7 kHz. Two high-pass biquads (0x15/0x6c and
+the flat version below, it is about 2.5 dB louder at 1 kHz, 7 dB at 3 kHz
+and 9 dB at 5-7 kHz. Two high-pass biquads (0x15/0x6c and
 0x16/0x08, about 70 Hz) protect the speaker. We replaced the four EQ biquads
 with cuts computed from measurements, and left the high-pass biquads as they
 are:
@@ -47,12 +47,8 @@ are:
 
 Measured with a calibrated XREF20 microphone at 50 cm, averaged over three
 positions, tablet at the desk edge. The deviation from 200 Hz to 10 kHz drops
-from 3.9 dB RMS to 1.0 dB. We measured the factory EQ first, with
-the tablet on the desk. A reflection from the desk then made a dip at
-4-5 kHz, so the final measurements were taken with the tablet at the desk
-edge. For the chart, the factory curve at the desk edge is derived from the
-same three positions measured with an earlier flat EQ, with those biquads
-swapped for the factory ones. The EQ is purely digital, so this is exact. Below about 200 Hz the
+from 3.8 dB RMS to 1.0 dB. Both curves are measured directly, at the same
+positions with the same sweep. Below about 200 Hz the
 speaker rolls off acoustically. The EQ has cuts only, so the flat version is quieter: about
 3 dB in the speech band.
 
