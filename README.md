@@ -15,8 +15,8 @@ on.
   Branch `tsv71/device` (one commit per change on `v7.1.3-r0`), `tsv71/debug`
   (plus local debug commits), tag `tsv-v7.1.3-r2` (what runs on our tablets).
   The 7.0.9 series (`tsv/device`, `tsv/debug`, tag `tsv-v7.0.9-r120`) is kept
-  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r5`) runs
-  on one unit for testing; see
+  but no longer updated. A 7.3 port (`tsv73/device`, tag `tsv-v7.3.0-r8`, with
+  the tas2781 speaker driver) runs on one unit for testing; see
   [docs/upstream-status.md](docs/upstream-status.md#kernel-73-test).
 - **This repository:** how to build and install it, a postmarketOS overlay in
   `pmaports/`, and notes per topic in `docs/`.
@@ -27,7 +27,7 @@ on.
 |---|---|---|
 | Front camera S5KC505A | 1304x980 at 30 fps, libcamera 0.8.0 SoftISP, calibrated colour | [docs/camera.md](docs/camera.md) |
 | Venus H.264 encoder, H.264/H.265 decoder | Hardware encode and decode, RTSP doorbell streams | [docs/venus.md](docs/venus.md) |
-| Speaker, microphones | TAS5782M speaker; full duplex with WebRTC echo cancellation (20/20 cycles on one unit) and RNNoise noise suppression | [docs/audio.md](docs/audio.md) |
+| Speaker, microphones | TAS5782M speaker (flat DSP EQ on 7.3); full duplex with WebRTC echo cancellation (20/20 cycles on one unit) and RNNoise noise suppression | [docs/audio.md](docs/audio.md) |
 | Proximity and light (VCNL4200), accelerometer, touch | Working; light reads only straight ahead | [docs/sensors.md](docs/sensors.md) |
 | Wi-Fi (QCA9379) | No boot failures in 30 warm reboots each on two units (it used to fail in up to half of the boots on one) | [docs/wifi.md](docs/wifi.md) |
 | APSS watchdog | systemd feeds `/dev/watchdog0` | [docs/watchdog.md](docs/watchdog.md) |

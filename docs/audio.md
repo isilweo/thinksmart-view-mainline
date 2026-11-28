@@ -2,13 +2,80 @@
 
 ## Speaker (TAS5782M)
 
-The speaker amplifier is a TAS5782M, driven by the tas5805m driver with Felix
-Kaechele's TAS5782M support. On `tsv/device` this is the commit "ASoC: tas5805m:
-add TAS5782M support from Felix Kaechele's tree", adapted from his
-work-in-progress commit. Felix calls it a stopgap: a proper TAS5782M driver is
-still needed, and the volume control still uses the TAS5805M register layout.
-The DSP program it loads comes from the postmarketOS `firmware-qcom-msm8953`
-package.
+On 7.3 (`tsv73/device`, tag `tsv-v7.3.0-r8`) the amplifier is driven by the
+tas2781 driver with Felix Kaechele's TAS5782M support: his six commits from
+the `tas5782m-tas2781` branch, a DT commit for this board and one commit of
+ours that caps the digital volume at 0 dB. On 7.1.3 and 7.0.9 it is still the
+stopgap in the tas5805m driver ("ASoC: tas5805m: add TAS5782M support from
+Felix Kaechele's tree"), whose volume control uses the TAS5805M register
+layout.
+
+- **Firmware.** tas2781 loads an RCA file,
+  `qcom/msm8953/lenovo/cd-18781y/tas5782mRCA1.bin` (DT `firmware-name`).
+  Felix's `tas5782m-rca.py` (commit 98432449 in his
+  [postmarketos-vendor-lenovo-cd-18781y](https://gitlab.com/kaechele/postmarketos-vendor-lenovo-cd-18781y)
+  repository) builds it from the vendor register-pair DSP blob,
+  `tas5728m_dsp_lenovo_cd-18781y.bin`. We do not ship either file.
+- **Reset.** PDN# is inverted on the board: the amplifier runs while GPIO 44 is
+  low, so the DT has `reset-gpios = <&tlmm 44 GPIO_ACTIVE_LOW>`. With
+  `GPIO_ACTIVE_HIGH` the amplifier stays in power-down and NACKs I2C.
+- **Volume.** "ASoC: tas2781: limit the TAS5782M digital volume to 0 dB":
+  the control `Speaker Digital Volume` runs 0..207 in 0.5 dB steps, 0 is mute
+  and 207 is 0 dB (register 0x3d = 0x30). Above 0 dB the speaker distorts in
+  the bass (below). Set it to 207 and control the level in PipeWire.
+- **Config.** `CONFIG_SND_SOC_TAS2781_I2C=m`. The UCM `HiFi.conf` from Felix's
+  repository matches the new control names.
+
+### Flat DSP EQ
+
+The vendor DSP program has four EQ biquads (book 0x8c, page 0x16, registers
+0x1c, 0x30, 0x44, 0x58) that tune the speaker for speech: measured against
+the flat version below, it is 7-9 dB louder from 3 to 5 kHz and 10 dB at
+7 kHz. Two high-pass biquads (0x15/0x6c and
+0x16/0x08, about 70 Hz) protect the speaker. We replaced the four EQ biquads
+with cuts computed from measurements, and left the high-pass biquads as they
+are:
+
+| Biquad | Cut |
+|---|---|
+| `8c:16:1c` | -3.6 dB at 1.1 kHz |
+| `8c:16:30` | -7.9 dB at 2.8 kHz |
+| `8c:16:44` | -7.4 dB at 7.9 kHz |
+| `8c:16:58` | -10 dB at 17 kHz |
+
+![Factory vs. flat DSP EQ](img/speaker-factory-vs-flat-eq.png)
+
+Measured with a calibrated XREF20 microphone at 50 cm, averaged over three
+positions, tablet at the desk edge. The deviation from 200 Hz to 10 kHz drops
+from 3.9 dB RMS to 1.0 dB. Below about 200 Hz the speaker rolls off
+acoustically. The EQ has cuts only, so the flat version is quieter: about
+3 dB in the speech band.
+
+[`tools/tas5782m-eq-patch.py`](../tools/tas5782m-eq-patch.py) replaces
+coefficients in the register-pair blob (five 32-bit words per biquad: b0,
+b1/2, b2, -a1/2, -a2, Q1.31). Then build the RCA file from the result:
+
+```sh
+tools/tas5782m-eq-patch.py tas5728m_dsp_lenovo_cd-18781y.bin flat.bin \
+  8c:16:1c=7af925f9,8fe71250,6765aa63,7018edb0,9da12fa4 \
+  8c:16:30=6fcc49f9,a1d37f5c,59f31d54,5e2c80a4,b64098b3 \
+  8c:16:44=6e037727,cecf4e1e,5340a554,3130b1e2,bebbe385 \
+  8c:16:58=62806a40,32dcc60a,47379273,cd2339f6,d648034d
+tas5782m-rca.py build flat.bin tas5782mRCA1.bin
+```
+
+Run on one unit (unit 5). The response depends on what is around the tablet:
+a desk in front of the speaker added a dip at 4-5 kHz.
+
+**Louder than 0 dB.** At +3 dB (register 0x3d = 0x2a), sweeps at -12 to
+0 dBFS showed no compression, but the bass distortion rises. THD at 0 dBFS
+was 23 % at 100 Hz, 7.9 % at 150 Hz, 3.1 % at 200 Hz, and below 1 % from
+300 Hz up. A steeper high-pass (about 130 Hz instead of 70 Hz) would allow
++3 dB; we kept 0 dB.
+
+**Speech vs. music.** The flat DSP EQ is the base. A voice or music profile
+goes on top as a PipeWire filter-chain (the builtin `bq_*` filters, or
+`bq_raw` with the factory coefficients to get the vendor sound back).
 
 `soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10). Otherwise
 apk may pick `alsa-ucm-conf-unisoc-ums9230`.

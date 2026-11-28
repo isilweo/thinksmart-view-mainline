@@ -303,8 +303,8 @@ is the 7.3 release of msm8953-mainline.
 
 `tsv73/device` is the series on msm8953-mainline `barni2000/7.3/develop` at
 `9e921a3c1eeb` (a development branch; there is no 7.3 release of that tree
-yet), plus one fix for 7.3 and the two DT commits below. Tag `tsv-v7.3.0-r5`
-(`tsv73/debug`) runs on one unit.
+yet), plus one fix for 7.3, the DT commits below and the tas2781 speaker
+driver. Tag `tsv-v7.3.0-r8` (`tsv73/debug`) runs on one unit.
 
 - Two VCNL4000 commits were dropped: 7.3 already makes `regulator_names`
   static and powers the sensor down on a late probe failure through a devm
@@ -315,6 +315,11 @@ yet), plus one fix for 7.3 and the two DT commits below. Tag `tsv-v7.3.0-r5`
 - 7.3 breaks the Venus encoder on MSM8953 for frames of 960x540 and larger;
   see [venus.md](venus.md#notes). `tsv73/device` restores the NV12 padding.
 - The q6asm-dai full-duplex fixes are not in 7.3 either and are carried here.
+- The speaker amplifier moved from the tas5805m stopgap to tas2781: the
+  stopgap is reverted, Felix Kaechele's six TAS5782M commits for tas2781 are
+  applied unchanged, a DT commit describes the amplifier for that binding
+  (PDN# as active-low `reset-gpios`, `firmware-name`), and one commit caps the
+  digital volume at 0 dB. See [audio.md](audio.md#speaker-tas5782m).
 - On unit 5: all devices come up, the Venus test series passes 48/48 with
   the padding fix, and the encoder works from 640x480 to 1920x1080.
 
