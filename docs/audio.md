@@ -79,6 +79,9 @@ placements, so compare the trend, not single values). A steeper high-pass (about
 goes on top as a PipeWire filter-chain (the builtin `bq_*` filters, or
 `bq_raw` with the factory coefficients to get the vendor sound back).
 
+`soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10). Otherwise
+apk may pick `alsa-ucm-conf-unisoc-ums9230`.
+
 ### Music profile with psychoacoustic bass
 
 Below about 150 Hz the speaker gives little output, and what it gives
@@ -163,9 +166,6 @@ Packages: `calf-lv2` and `lilv` from the repository, plus
 1.6.11 overlay as the rest of PipeWire (see Noise suppression). The `nofail`
 flag keeps PipeWire running if the plugin is missing; the player then plays
 to the default sink.
-
-`soc-qcom-msm8953`: raise the UCM `provider_priority` (we use 10). Otherwise
-apk may pick `alsa-ucm-conf-unisoc-ums9230`.
 
 ## Full duplex and echo cancellation
 
