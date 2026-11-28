@@ -47,10 +47,12 @@ are:
 
 Measured with a calibrated XREF20 microphone at 50 cm, averaged over three
 positions, tablet at the desk edge. The deviation from 200 Hz to 10 kHz drops
-from 3.9 dB RMS to 1.0 dB. The flat curve is measured directly. The factory
-curve is the same three positions measured with an earlier flat EQ, with the
-exact response of those biquads swapped for the factory ones; the EQ is purely
-digital, so this is a calculation, not an estimate. Below about 200 Hz the
+from 3.9 dB RMS to 1.0 dB. We measured the factory EQ first, with
+the tablet on the desk. A reflection from the desk then made a dip at
+4-5 kHz, so the final measurements were taken with the tablet at the desk
+edge. For the chart, the factory curve at the desk edge is derived from the
+same three positions measured with an earlier flat EQ, with those biquads
+swapped for the factory ones. The EQ is purely digital, so this is exact. Below about 200 Hz the
 speaker rolls off acoustically. The EQ has cuts only, so the flat version is quieter: about
 3 dB in the speech band.
 
@@ -67,8 +69,7 @@ tools/tas5782m-eq-patch.py tas5728m_dsp_lenovo_cd-18781y.bin flat.bin \
 tas5782m-rca.py build flat.bin tas5782mRCA1.bin
 ```
 
-Run on one unit (unit 5). The response depends on what is around the tablet:
-a desk in front of the speaker added a dip at 4-5 kHz.
+Run on one unit (unit 5).
 
 **Louder than 0 dB.** The bass distorts at full scale already at 0 dB: with
 the factory EQ, THD (H2-H5) at 0 dBFS is 18 % at 100 Hz, 6.0 % at 150 Hz and
