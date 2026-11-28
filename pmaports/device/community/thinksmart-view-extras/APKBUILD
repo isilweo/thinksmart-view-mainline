@@ -1,12 +1,13 @@
 # Lenovo ThinkSmart View (CD-18781Y) helpers for postmarketOS
 pkgname=thinksmart-view-extras
 pkgver=1
-pkgrel=2
-pkgdesc="Lenovo ThinkSmart View: Wi-Fi boot guard, APSS watchdog for systemd, echo cancellation, noise suppression"
+pkgrel=3
+pkgdesc="Lenovo ThinkSmart View: Wi-Fi boot guard, APSS watchdog for systemd, volume keys, echo cancellation, noise suppression"
 url="https://github.com/isilweo/thinksmart-view-mainline"
 arch="noarch"
 license="CC0-1.0"
 options="!check"
+depends="python3 wireplumber"
 subpackages="$pkgname-echo-cancel:echo_cancel $pkgname-noise-suppression:noise_suppression"
 source="
 	wifi-guard
@@ -15,6 +16,8 @@ source="
 	60-echo-cancel.conf
 	61-noise-suppression.conf
 	thinksmart-view-extras.preset
+	volume-keys
+	volume-keys.service
 "
 
 package() {
@@ -26,6 +29,11 @@ package() {
 	# The kernel needs patches 0031-0032 (APSS watchdog) for /dev/watchdog0.
 	install -Dm644 "$srcdir"/80-apss-watchdog.conf \
 		"$pkgdir"/usr/lib/systemd/system.conf.d/80-apss-watchdog.conf
+	# User service: enable it for the session user with
+	# systemctl --user enable volume-keys (the user must be in "input").
+	install -Dm755 "$srcdir"/volume-keys "$pkgdir"/usr/sbin/volume-keys
+	install -Dm644 "$srcdir"/volume-keys.service \
+		"$pkgdir"/usr/lib/systemd/user/volume-keys.service
 }
 
 echo_cancel() {
@@ -48,4 +56,6 @@ c3a82e3bf98ff7485d684563e3c840716c7b2e20ddf128640c23a4cfc7e97e43613db9f3a6277372
 ed042d8cef8e8525a02c43acdefb001791277e5b5d8138fb15f265d6233256ef70a3352c1c834813f913b14ae9ae4feb60748ed6e550b905004332745221c9f8  60-echo-cancel.conf
 51d5baeeb04d5c7e0a8035c67029a919e2393d5597075c029b7915d533b2e3b39e73c3e841e6864c494f65e62f60b0353d78f2797f5d5d54594a07bd2e1abbda  61-noise-suppression.conf
 fc65f8dfaa3751d78ba36cd590f5d3e31f9d0d42bcfe52e5504bd63067a194d0c305053a102591a9af66e88d9bd9bbe9b848042b736000f7d6714b8f8485d930  thinksmart-view-extras.preset
+ecd32b258eb9e7900d8cc60e160198ed21f5557a9ebb47241e436fc1cb41ed22ff069201c0f302caf6175db105a01ced1279a7d6ef320db0d286881866ae1dd1  volume-keys
+8c72f4402b7efa7026321e8caf20d8f30e03ae335d4cc03b84b082146f3673937c70229bf57690336be1f102d66d15181cf32f4d8298e0a9d15dd963f68bb3eb  volume-keys.service
 "

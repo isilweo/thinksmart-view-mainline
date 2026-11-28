@@ -1,0 +1,150 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: CC0-1.0
+"""Volume keys for the Lenovo ThinkSmart View.
+
+Volume up comes from gpio-keys, volume down from the PMIC (pm8941_resin).
+Nothing in a kiosk setup (such as cage) handles them, so this changes the
+volume of the default PipeWire sink with wpctl. It runs as a systemd user
+service in the session that owns PipeWire; the user must be in the input
+group. Run as root, it acts for VOLUME_KEYS_USER instead. Holding a key
+repeats. VOLUME_KEYS_TARGET selects the node: the default sink
+(@DEFAULT_AUDIO_SINK@), or a node.name such as the speaker's ALSA sink, to
+change the amplifier's hardware volume directly.
+"""
+import os
+import json
+import pwd
+import select
+import struct
+import subprocess
+import sys
+import time
+
+EV_KEY = 1
+KEY_VOLUMEDOWN = 114
+KEY_VOLUMEUP = 115
+DEVICES = ("gpio-keys", "pm8941_resin")
+STEP = os.environ.get("VOLUME_KEYS_STEP", "5%")
+USER = os.environ.get("VOLUME_KEYS_USER") or pwd.getpwuid(os.getuid()).pw_name
+TARGET = os.environ.get("VOLUME_KEYS_TARGET") or "@DEFAULT_AUDIO_SINK@"
+EVENT = struct.Struct("llHHi")
+
+
+def find_devices():
+    found = []
+    for name in sorted(os.listdir("/sys/class/input")):
+        if not name.startswith("event"):
+            continue
+        try:
+            with open(f"/sys/class/input/{name}/device/name") as f:
+                dev = f.read().strip()
+        except OSError:
+            continue
+        if dev in DEVICES:
+            found.append(f"/dev/input/{name}")
+    return found
+
+
+def run(args, capture=False):
+    pw = pwd.getpwnam(USER)
+    env = {"XDG_RUNTIME_DIR": f"/run/user/{pw.pw_uid}",
+           "PATH": "/usr/sbin:/usr/bin:/sbin:/bin"}
+    if os.getuid() != pw.pw_uid:
+        args = ["runuser", "-u", USER, "--"] + args
+    try:
+        r = subprocess.run(args, env=env, check=False, timeout=5,
+                           stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        return r.stdout if capture else None
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"volume-keys: {e}", file=sys.stderr, flush=True)
+        return None
+
+
+_node = None
+
+
+def target_id(refresh=False):
+    """wpctl takes node ids only; look up a node.name in pw-dump."""
+    global _node
+    if TARGET.startswith("@") or TARGET.isdigit():
+        return TARGET
+    if _node and not refresh:
+        return _node
+    out = run(["pw-dump"], capture=True)
+    try:
+        for obj in json.loads(out or b"[]"):
+            props = obj.get("info", {}).get("props", {})
+            if props.get("node.name") == TARGET:
+                _node = str(obj["id"])
+                return _node
+    except ValueError:
+        pass
+    print(f"volume-keys: no node {TARGET}", file=sys.stderr, flush=True)
+    return None
+
+
+def set_volume(change):
+    node = target_id()
+    if not node:
+        return
+    pw = pwd.getpwnam(USER)
+    args = ["wpctl", "set-volume", "-l", "1.0", node, change]
+    if os.getuid() != pw.pw_uid:
+        args = ["runuser", "-u", USER, "--"] + args
+    env = {"XDG_RUNTIME_DIR": f"/run/user/{pw.pw_uid}",
+           "PATH": "/usr/sbin:/usr/bin:/sbin:/bin"}
+    try:
+        r = subprocess.run(args, env=env, timeout=5, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"volume-keys: {e}", file=sys.stderr, flush=True)
+        return
+    if r.returncode != 0 and not TARGET.startswith("@"):
+        target_id(refresh=True)
+
+
+REPEAT_DELAY = 0.4
+REPEAT_RATE = 0.15
+DEBUG = bool(os.environ.get("VOLUME_KEYS_DEBUG"))
+
+
+def main():
+    while True:
+        paths = find_devices()
+        if paths:
+            break
+        time.sleep(5)
+    fds = {os.open(p, os.O_RDONLY): p for p in paths}
+    print("volume-keys: " + ", ".join(fds.values()), flush=True)
+    held = None         # key code being held
+    next_repeat = 0.0
+    while True:
+        timeout = None
+        if held is not None:
+            timeout = max(0.0, next_repeat - time.monotonic())
+        ready, _, _ = select.select(list(fds), [], [], timeout)
+        if not ready and held is not None:
+            # The keys have no autorepeat in the kernel; repeat here.
+            set_volume(STEP + ("+" if held == KEY_VOLUMEUP else "-"))
+            next_repeat = time.monotonic() + REPEAT_RATE
+            continue
+        for fd in ready:
+            data = os.read(fd, EVENT.size * 16)
+            for i in range(0, len(data) - EVENT.size + 1, EVENT.size):
+                _, _, etype, code, value = EVENT.unpack_from(data, i)
+                if etype != EV_KEY or code not in (KEY_VOLUMEUP, KEY_VOLUMEDOWN):
+                    continue
+                if DEBUG:
+                    print(f"volume-keys: {fds[fd]} code {code} value {value}",
+                          flush=True)
+                if value == 1:
+                    held = code
+                    set_volume(STEP + ("+" if code == KEY_VOLUMEUP else "-"))
+                    next_repeat = time.monotonic() + REPEAT_DELAY
+                elif value == 0 and held == code:
+                    held = None
+
+
+if __name__ == "__main__":
+    sys.exit(main())
